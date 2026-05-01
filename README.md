@@ -2,6 +2,26 @@
 
 A desktop GUI tool for browsing and editing RocksDB databases. Powered by [pywebview](https://pywebview.flowrl.com/) and [rocksdict](https://congyuwang.github.io/RocksDict/), it runs as a single native window without requiring a browser, HTTP server, or open port.
 
+## Screenshots
+
+### Welcome screen
+
+When launched without a database, the app shows a welcome screen — click **Open Database** to pick a RocksDB directory through the native folder dialog.
+
+![Welcome screen](screenshot/screenshot_01.png)
+
+### Main view
+
+Once a database is open, every column family is listed in the dropdown. Browse, filter, sort, edit, import, and export data straight from the table.
+
+![Main view](screenshot/screenshot_02.png)
+
+### Edit entry
+
+The modal editor lets you add or edit a key/value pair with format / minify helpers and real-time JSON validation.
+
+![Edit entry](screenshot/screenshot_03.png)
+
 ## Overview
 
 This tool consists of the following components:
