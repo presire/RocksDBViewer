@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=RocksDB GUI Viewer
+Name[ja]=RocksDB GUI ビューワ
+GenericName=RocksDB Database Viewer
+GenericName[ja]=RocksDB データベースビューワ
+Comment=View and edit RocksDB databases
+Comment[ja]=RocksDB データベースを閲覧・編集
+Exec=/home/suse/Program/GitLocal/RocksDBViewer/RocksDBViewer.sh %f
+Icon=/home/suse/Program/GitLocal/RocksDBViewer/assets/RocksDBViewer.png
+Terminal=false
+Categories=Development;Database;
+StartupNotify=true
+Keywords=RocksDB;Database;Viewer;Editor;

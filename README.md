@@ -1,176 +1,135 @@
 # RocksDB GUI Viewer
 
-A GUI tool for operating RocksDB databases from a browser. Access RocksDB via REST API and intuitively browse, edit, and delete data.
+A desktop GUI tool for browsing and editing RocksDB databases. Powered by [pywebview](https://pywebview.flowrl.com/) and [rocksdict](https://congyuwang.github.io/RocksDict/), it runs as a single native window without requiring a browser, HTTP server, or open port.
 
 ## Overview
 
 This tool consists of the following components:
 
-1. **Create_RocksDB.py** - Sample database creation script (for initial setup)
-2. **RocksDB_API_Server.py** - REST API server for accessing RocksDB (Python/Flask)
-3. **RocksDBViewer.html** - Web interface for data manipulation
-4. **rocksdb-manager.js** - JavaScript code managing UI and API server integration
+1. **RocksDBViewer.py** — Desktop entry point (pywebview + rocksdict)
+2. **Create_RocksDB.py** — Sample database creation script (for initial setup)
+3. **RocksDBViewer.html** — Web UI rendered inside the native window
+4. **js/rocksdb-manager.js** — UI logic that calls Python via `window.pywebview.api`
 
 ## Setup
 
 ### Requirements
 
 - Python 3.7 or higher
-- Modern web browser (Chrome, Firefox, Safari, etc.)
+- A platform-native WebView backend:
+  - **Linux**: `WebKit2GTK` (e.g., `python3-webkit2gtk`, or `webkit2gtk` runtime)
+  - **Windows**: WebView2 (preinstalled on Windows 11; Windows 10 may need [the Evergreen runtime](https://developer.microsoft.com/en-us/microsoft-edge/webview2/))
+  - **macOS**: WebKit (built-in)
 
 ### Installing Python Packages
 
 ```bash
-pip3 install flask flask-cors rocksdict
+pip3 install pywebview rocksdict
+```
+
+**Using a virtualenv?** pywebview needs either a GTK or Qt backend. A venv cannot see the system `PyGObject` (`gi`) module, so add the pip-installable Qt backend:
+
+```bash
+pip3 install qtpy pyside6
 ```
 
 ### File Structure
 
 ```
 project/
+├── RocksDBViewer.py           # Desktop entry point (pywebview)
 ├── Create_RocksDB.py          # Sample database creation script
-├── RocksDB_API_Server.py      # API server
-├── RocksDBViewer.html         # HTML interface
+├── RocksDBViewer.html         # Web UI (rendered inside pywebview)
 ├── js/
-│   └── rocksdb-manager.js    # JavaScript code
+│   └── rocksdb-manager.js    # UI logic
 ├── css/
-│   ├── core.css              # Basic styles (optional)
-│   └── tailwind.css          # Tailwind CSS styles (optional)
+│   └── tailwind.css          # Tailwind CSS
+├── assets/
+│   └── RocksDBViewer.png     # Application icon
 └── sample_rocksdb/            # RocksDB database (auto-generated)
 ```
-
-**Note**  
-CSS files are referenced in the HTML file, but since Tailwind utility classes are used, they can also be loaded via CDN.
 
 ## Usage
 
 ### 0. Creating a Sample Database (First Time Only)
 
-If you want to try with sample data, you can create a sample database using the included `Create_RocksDB.py` script.
-
 ```bash
-# Create sample database at default path (./sample_rocksdb)
+# Default path (./sample_rocksdb)
 python3 Create_RocksDB.py
 
-# Create sample database at custom path
+# Custom path
 python3 Create_RocksDB.py /path/to/your/rocksdb
 ```
 
 **Sample data created:**
-- `default` - Application basic information and settings (7 records)
-- `users` - User information (5 records)
-- `products` - Product data (7 records)
-- `orders` - Order history (5 records)
-- `config` - System configuration (17 records)
-- `logs` - Application logs (20 records)
+- `default` (7 records), `users` (5), `products` (7), `orders` (5), `config` (17), `logs` (20)
 
-After running the script, the following will be displayed:
+### 1. Launching the Desktop App (Recommended)
 
-```
-Sample database creation completed!
-Database path: /absolute/path/to/sample_rocksdb
-
-Created column families:
-   • default      :   7 records
-   • users        :   5 records
-   • products     :   7 records
-   • orders       :   5 records
-   • config       :  17 records
-   • logs         :  20 records
-```
-
-**Note**  
-If an existing database exists, an overwrite confirmation prompt will be displayed.
-
-### 1. Starting the API Server
-
-First, start the RocksDB API server.
+#### From the command line
 
 ```bash
-# Using default path (./sample_rocksdb)
-python3 RocksDB_API_Server.py
+# Launch without an argument — the welcome screen lets you pick a directory
+python3 RocksDBViewer.py
 
-# Specifying a custom database path
-python3 RocksDB_API_Server.py /path/to/your/rocksdb
+# Launch with a path — opens the database immediately
+python3 RocksDBViewer.py /path/to/your/rocksdb
 ```
 
-When the server starts successfully, the following will be displayed:
+> The "**Open Database**" button in the top panel lets you switch to a different RocksDB directory at any time using the native folder picker.
 
-```
-============================================================
-RocksDB REST API Server
-============================================================
+#### Double-click launch (Linux)
 
-Database path: /absolute/path/to/sample_rocksdb
-Server URL: http://localhost:5000
+Either run `RocksDBViewer.sh` directly, or register the `.desktop` file in your application menu so you can launch it from the menu / taskbar / desktop.
 
-Available endpoints:
-  GET    /api/health                     - Health check
-  GET    /api/column-families            - Column family list
-  GET    /api/data/<cf>                  - Get all data
-  ...
+```bash
+# Run the launcher script directly
+./RocksDBViewer.sh                          # default DB
+./RocksDBViewer.sh /path/to/your/rocksdb    # custom DB
 
-To stop server: Ctrl+C
-============================================================
+# Register in application menu / desktop (KDE / GNOME / XFCE)
+./install_desktop.sh
 ```
 
-### 2. Opening the HTML Viewer
+`install_desktop.sh` writes `~/.local/share/applications/RocksDBViewer.desktop`, so the app shows up in your application menu / launcher / KRunner under "RocksDB GUI Viewer". The script also offers to drop a shortcut on your Desktop.
 
-1. Open `RocksDBViewer.html` in a web browser
-2. Enter `http://localhost:5000` in the "API Server URL" field (preset by default)
-3. Click the "Connect to Server" button
+> **Note**: If you move the project to a different directory, re-run `install_desktop.sh` — it rewrites the absolute paths inside the `.desktop` file to match the current location.
 
-When the connection is successful, the status in the upper right of the screen changes to "Connected" and the main content is displayed.
+A native window opens automatically and connects to the database. No browser, no port, no manual URL entry.
 
-### 3. Data Operations
+### 2. Data Operations
 
 #### Selecting a Column Family
 
-Select the column family you want to work with from the dropdown menu at the top of the screen.
-
-Available column families:
-- `default` - Default column family
-- `users` - User information
-- `products` - Product information
-- `orders` - Order information
-- `config` - Configuration information
-- `logs` - Log information
+Use the dropdown menu at the top of the window. Available column families: `default`, `users`, `products`, `orders`, `config`, `logs`.
 
 #### Displaying Data
 
-All keys and values of the selected column family are displayed in table format.
+All keys/values for the selected column family are shown in a table.
 
-#### Searching Data
+#### Searching
 
-Enter a keyword in the search box to filter data containing it in keys or values in real-time.
+Type a keyword in the search box. Keys and values are filtered in real time.
 
-#### Adding/Editing Data
+#### Adding / Editing
 
-1. Click the "Add New" button (or click the "Edit" button for existing data)
-2. Enter key and value in the modal dialog
-3. Click the "Save" button
+1. Click **Add New** (or **Edit** on a row)
+2. Fill in key and value in the modal
+3. Click **Save**
 
-**JSON Editing Features:**
-- "Format" button - Format JSON for easy viewing
-- "Minify" button - Compress JSON to a single line
-- Real-time JSON validation - Check syntax errors during input
+JSON editing helpers: **Format**, **Minify**, real-time validation.
 
-#### Deleting Data
+#### Deleting
 
-- **Individual deletion**: Click the "Delete" button for each data row
-- **Delete all**: Delete all data in the currently selected column family with the "Clear All" button
+- **Single**: Click **Delete** on the row
+- **All**: Click **Clear All** (confirmation required)
 
-#### Exporting Data
+#### Export / Import
 
-Click the "Export" button to download data from the currently selected column family in JSON format.
+- **Export**: Downloads the current column family as JSON
+- **Import**: Selects a JSON file and writes it back into the column family
 
-#### Importing Data
-
-1. Click the "Import" button
-2. Select a JSON format file
-3. Data is automatically imported
-
-**Import file format:**
+Import file format:
 ```json
 {
   "key1": "value1",
@@ -179,173 +138,52 @@ Click the "Export" button to download data from the currently selected column fa
 }
 ```
 
-## API Endpoints
-
-The API server provides the following endpoints:
-
-### Health Check
-```
-GET /api/health
-```
-Get server status and database information
-
-### Column Family List
-```
-GET /api/column-families
-```
-Get list of available column families
-
-### Get Data
-```
-GET /api/data/<column_family>
-GET /api/data/<column_family>?search=keyword
-GET /api/data/<column_family>/<key>
-```
-Get data (all, search, key-specific)
-
-### Add/Update Data
-```
-POST /api/data/<column_family>
-Content-Type: application/json
-
-{
-  "key": "my-key",
-  "value": "my-value"
-}
-```
-
-### Delete Data
-```
-DELETE /api/data/<column_family>/<key>
-DELETE /api/data/<column_family>/clear
-```
-Individual deletion or delete all
-
-### Export
-```
-GET /api/export/<column_family>
-```
-Export data in JSON format
-
-### Import
-```
-POST /api/import/<column_family>
-Content-Type: application/json
-
-{
-  "key1": "value1",
-  "key2": "value2"
-}
-```
-
-## Usage Examples
-
-### Example 1: User Information Management
-
-```json
-// Key: user:1001
-// Value:
-{
-  "id": 1001,
-  "name": "Taro Yamada",
-  "email": "taro@example.com",
-  "role": "admin"
-}
-```
-
-### Example 2: Configuration Storage
-
-```json
-// Key: config:app
-// Value:
-{
-  "app_name": "MyApp",
-  "version": "1.0.0",
-  "debug_mode": false
-}
-```
-
-### Example 3: Simple Cache Data
-
-```
-Key: cache:session:abc123
-Value: {"user_id": 42, "expires": 1234567890}
-```
-
 ## Feature List
 
-### Main Features
-
-- ✅ Real-time search and filtering
-- ✅ JSON syntax validation and formatting
-- ✅ Data import/export (JSON format)
-- ✅ Multiple column family support
-- ✅ Responsive design (mobile compatible)
-- ✅ Copy to clipboard functionality
-- ✅ Operation feedback via toast notifications
-- ✅ Data addition, editing, and deletion
-- ✅ Custom scrollbar
-- ✅ Language toggle (Japanese/English)
-
-### UI Features
-
-- Smooth user experience with animation effects
-- Visual feedback through color coding
-- Automatic truncation display for long data
-- Automatic detection and badge display for JSON data
+- Native desktop window (no browser required)
+- Direct `rocksdict` access — no HTTP, no CORS, no port conflicts
+- Real-time search and filtering
+- JSON syntax validation, format, and minify
+- Data import / export (JSON)
+- Multiple column family support
+- Sort toggle, refresh, auto-refresh (10s interval)
+- Toast notifications
+- Japanese / English language toggle
+- Custom scrollbar, animations, color-coded feedback
 
 ## Security Notes
 
 - This tool is intended for use in **development environments**
-- If using in production, implement the following measures:
-  - Authentication and authorization
-  - Use HTTPS communication
-  - Review CORS settings
-  - Strengthen input validation
-  - Implement API rate limiting
+- It opens the database directly via `rocksdict`. Treat the database files with the same care as any local file you would not expose over a network.
 
 ## Troubleshooting
 
-### Cannot Connect to Server
+### The window does not open / pywebview cannot find a backend
 
-**Cause 1**: API server is not running
+Linux: install WebKit2GTK runtime (e.g., openSUSE: `zypper install python3-webkit2gtk` or equivalent). Some distros also require `gobject-introspection` and `cairo` system packages.
 
-```bash
-# Start the server
-python3 RocksDB_API_Server.py
-```
+Windows: install WebView2 runtime if your OS does not bundle it.
 
-**Cause 2**: Incorrect URL
+### `WebKitJavascriptError: Unsupported result type (601)` warnings
 
-- Default URL: `http://localhost:5000`
-- Change port number appropriately if using a different port
+These are harmless internal pywebview bridge initialization messages on WebKit2GTK and do not affect functionality.
 
-**Cause 3**: CORS error
-
-- Verify that CORS is enabled on the API server
-- Check error messages in the browser console
-
-### Database Not Found
+### Database not found
 
 ```bash
-# Create sample database
-python3 Create_RocksDB.py ./Example
-
-# Or create at default path
-python3 Create_RocksDB.py
+python3 Create_RocksDB.py ./sample_rocksdb
 ```
 
-### Data Not Displaying
+### Data does not display
 
-1. Check if the column family is correctly selected
-2. Check if data exists in the database
-3. Check error logs in the browser console
+1. Check the column family is selected
+2. Check that the database actually contains entries
+3. Open DevTools (right-click → Inspect, if available in your pywebview build) and look at the console
 
-### Errors During JSON Editing
+### JSON editing errors
 
-- Verify that the JSON format is correct
-- Use double quotes (`"`) (single quotes not allowed)
-- Be careful with trailing commas
+- Use double quotes (`"`); single quotes are not valid JSON
+- Beware of trailing commas
 
 ## License
 
@@ -353,15 +191,7 @@ This project is freely available for educational and development purposes.
 
 ## Contributing
 
-Bug reports and feature improvement suggestions are welcome.
-
-## Support
-
-If you encounter problems, check the following:
-1. Python and packages are correctly installed
-2. Database path is correct
-3. TCP port 5000 is not being used by other programs
-4. Error messages in the browser's JavaScript console
+Bug reports and feature requests are welcome.
 
 ---
 

@@ -1,3 +1,15 @@
 package.json
 package-lock.json
 css/tailwind-input.css
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+.python-version
+venv/
+.venv/
+
+# Sample / generated databases
+sample_rocksdb/
+sample_rocksdb:*

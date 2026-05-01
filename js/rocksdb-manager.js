@@ -1,5 +1,21 @@
-// RocksDB GUI Manager - Main JavaScript (Enhanced Version with Language Toggle)
-// API連携とUI制御を管理
+// RocksDB GUI Manager - Main JavaScript (Desktop / pywebview版)
+// Python (rocksdict) 直接呼び出しでRocksDBを操作
+//
+// すべてのDB操作は window.pywebview.api.<method>(...) 経由で行われ、
+// REST API・HTTP・CORSは介在しません。
+
+// pywebview API ヘルパ
+// pywebview の準備が整う前に呼ばれた場合は pywebviewready を待ちます
+function pyApi() {
+    if (window.pywebview && window.pywebview.api) {
+        return Promise.resolve(window.pywebview.api);
+    }
+    return new Promise((resolve) => {
+        window.addEventListener('pywebviewready', () => {
+            resolve(window.pywebview.api);
+        }, { once: true });
+    });
+}
 
 // ============================================================================
 // 言語定義
@@ -7,18 +23,19 @@
 const translations = {
     ja: {
         // ヘッダー
-        subtitle: 'REST API経由でRocksDBにアクセス',
+        subtitle: 'rocksdictにより直接アクセス (デスクトップ版)',
         language: '言語',
-        serverStatus: 'サーバステータス',
+        theme: 'テーマ',
+        serverStatus: 'ステータス',
         notConnected: '未接続',
         connected: '接続済み',
         connectionFailed: '接続失敗',
 
-        // 接続パネル
-        apiServerUrl: 'APIサーバURL',
-        apiUrlPlaceholder: '例: http://localhost:5000',
-        connectServer: 'サーバに接続',
-        disconnect: '切断',
+        // データベースパネル
+        databasePath: 'データベースパス',
+        openDatabase: 'データベースを開く',
+        noDatabaseSelected: 'データベースが選択されていません',
+        welcomeMessage: '「データベースを開く」ボタンから RocksDB ディレクトリを選択してください。',
 
         // メインコンテンツ
         columnFamily: 'カラムファミリー',
@@ -63,11 +80,8 @@ const translations = {
 
         // トーストメッセージ
         toast: {
-            enterUrl: 'APIサーバのURLを入力してください',
-            serverNotResponding: 'サーバが正常に応答していません',
             serverConnected: 'サーバに接続しました',
             serverConnectionFailed: 'サーバへの接続に失敗しました',
-            serverDisconnected: 'サーバから切断しました',
             autoRefreshStarted: '自動更新を開始しました（10秒間隔）',
             autoRefreshStopped: '自動更新を停止しました',
             dataRefreshed: 'データを再読み込みしました',
@@ -88,8 +102,7 @@ const translations = {
         // 確認ダイアログ
         confirm: {
             deleteKey: 'キー "%key%" を削除してもよろしいですか?\nこの操作は取り消せません。',
-            clearAll: 'カラムファミリー "%cf%" の全データを削除してもよろしいですか?\nこの操作は取り消せません。すべてのデータが完全に削除されます。',
-            disconnect: '以下の接続を切断しますか？\n\nAPIサーバ: %api%\nデータベース: %db%'
+            clearAll: 'カラムファミリー "%cf%" の全データを削除してもよろしいですか?\nこの操作は取り消せません。すべてのデータが完全に削除されます。'
         },
 
         // JSON検証
@@ -99,18 +112,19 @@ const translations = {
 
     en: {
         // Header
-        subtitle: 'Access RocksDB via REST API',
+        subtitle: 'Direct access via rocksdict (Desktop Edition)',
         language: 'Language',
-        serverStatus: 'Server Status',
+        theme: 'Theme',
+        serverStatus: 'Status',
         notConnected: 'Not Connected',
         connected: 'Connected',
         connectionFailed: 'Connection Failed',
 
-        // Connection Panel
-        apiServerUrl: 'API Server URL',
-        apiUrlPlaceholder: 'e.g., http://localhost:5000',
-        connectServer: 'Connect to Server',
-        disconnect: 'Disconnect',
+        // Database Panel
+        databasePath: 'Database Path',
+        openDatabase: 'Open Database',
+        noDatabaseSelected: 'No database selected',
+        welcomeMessage: 'Click "Open Database" to select a RocksDB directory.',
 
         // Main Content
         columnFamily: 'Column Family',
@@ -155,11 +169,8 @@ const translations = {
 
         // Toast Messages
         toast: {
-            enterUrl: 'Please enter API server URL',
-            serverNotResponding: 'Server is not responding properly',
             serverConnected: 'Connected to server',
             serverConnectionFailed: 'Failed to connect to server',
-            serverDisconnected: 'Disconnected from server',
             autoRefreshStarted: 'Auto-refresh started (10 second interval)',
             autoRefreshStopped: 'Auto-refresh stopped',
             dataRefreshed: 'Data refreshed',
@@ -180,8 +191,7 @@ const translations = {
         // Confirm Dialogs
         confirm: {
             deleteKey: 'Are you sure you want to delete key "%key%"?\nThis operation cannot be undone.',
-            clearAll: 'Are you sure you want to delete all data in column family "%cf%"?\nThis operation cannot be undone. All data will be permanently deleted.',
-            disconnect: 'Disconnect from the following?\n\nAPI Server: %api%\nDatabase: %db%'
+            clearAll: 'Are you sure you want to delete all data in column family "%cf%"?\nThis operation cannot be undone. All data will be permanently deleted.'
         },
 
         // JSON Validation
@@ -283,9 +293,36 @@ function loadLanguagePreference() {
 }
 
 // ============================================================================
+// テーマ切替 (ライト / ダーク)
+// ============================================================================
+
+/**
+ * 現在のテーマを切り替え、localStorage に保存する。
+ */
+function toggleTheme() {
+    const current = document.documentElement.getAttribute('data-theme') || 'light';
+    const next = current === 'dark' ? 'light' : 'dark';
+    document.documentElement.setAttribute('data-theme', next);
+    localStorage.setItem('rocksdb_theme', next);
+}
+
+/**
+ * 起動時にテーマ設定を復元。OS のダーク設定もフォールバックとして使う。
+ */
+function loadThemePreference() {
+    const saved = localStorage.getItem('rocksdb_theme');
+    let theme = saved;
+    if (!theme) {
+        theme = (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches)
+            ? 'dark'
+            : 'light';
+    }
+    document.documentElement.setAttribute('data-theme', theme);
+}
+
+// ============================================================================
 // グローバル変数の宣言
 // ============================================================================
-let apiUrl = '';
 let databasePath = ''; // データベースパスを保存
 let currentColumnFamily = '';
 let isConnected = false;
@@ -294,18 +331,17 @@ let autoRefreshEnabled = false;
 let sortOrder = 'none'; // 'none', 'asc', 'desc'
 
 // DOM要素の取得
-const apiUrlInput = document.getElementById('apiUrlInput');
-const connectBtn = document.getElementById('connectBtn');
-const disconnectBtn = document.getElementById('disconnectBtn');
+const dbPathDisplay = document.getElementById('dbPathDisplay');
 const dbStatus = document.getElementById('dbStatus');
 const mainContent = document.getElementById('mainContent');
+const welcomeState = document.getElementById('welcomeState');
+const openDbBtn = document.getElementById('openDbBtn');
 const columnFamilySelect = document.getElementById('columnFamilySelect');
 const searchInput = document.getElementById('searchInput');
 const entryCount = document.getElementById('entryCount');
 const addEntryBtn = document.getElementById('addEntryBtn');
 const refreshBtn = document.getElementById('refreshBtn');
 const clearAllBtn = document.getElementById('clearAllBtn');
-const exportBtn = document.getElementById('exportBtn');
 const importFileInput = document.getElementById('importFileInput');
 const dataTableBody = document.getElementById('dataTableBody');
 const loadingState = document.getElementById('loadingState');
@@ -320,151 +356,125 @@ const formatJsonBtn = document.getElementById('formatJsonBtn');
 const minifyJsonBtn = document.getElementById('minifyJsonBtn');
 const toastContainer = document.getElementById('toastContainer');
 
-// ページ読み込み時に接続先URLを復元
-function loadSavedUrl() {
-    const savedUrl = localStorage.getItem('rocksdb_api_url');
-    if (savedUrl) {
-        apiUrlInput.value = savedUrl;
-    }
-
-    // 自動更新設定を復元
+// 自動更新設定を復元
+function loadAutoRefreshPreference() {
     const savedAutoRefresh = localStorage.getItem('rocksdb_auto_refresh');
     if (savedAutoRefresh === 'true') {
         autoRefreshEnabled = true;
     }
 }
 
-// APIサーバに接続
-async function connectToServer() {
-    const url = apiUrlInput.value.trim();
+// pywebview 経由でRocksDBに接続 (起動時に自動実行)
+// 起動時にDBが既に開かれていればそれを反映、未選択なら welcome 画面を表示
+async function connectToDatabase() {
+    try {
+        const api = await pyApi();
+        const data = await api.health();
 
-    if (!url) {
-        showToast(t('toast.enterUrl'), 'error');
-        return;
+        if (data.status === 'ok') {
+            applyConnectedState(data.database_path);
+            await loadColumnFamilies();
+            if (autoRefreshEnabled) {
+                startAutoRefresh();
+            }
+        } else {
+            // 'no_database' などの未接続状態
+            applyDisconnectedState();
+        }
+    } catch (error) {
+        console.error('接続エラー:', error);
+        showToast(t('toast.serverConnectionFailed') + ': ' + error.message, 'error');
+        applyDisconnectedState();
+    }
+}
+
+// DB を開いている状態の UI 更新
+function applyConnectedState(path) {
+    isConnected = true;
+    databasePath = path || 'Unknown';
+
+    if (dbPathDisplay) {
+        dbPathDisplay.textContent = databasePath;
+        dbPathDisplay.title = databasePath;
     }
 
+    updateConnectionUI(true);
+    mainContent.classList.remove('hidden');
+    if (welcomeState) {
+        welcomeState.classList.add('hidden');
+    }
+}
+
+// DB が未選択の状態の UI 更新
+function applyDisconnectedState() {
+    isConnected = false;
+    databasePath = '';
+    currentColumnFamily = '';
+
+    if (dbPathDisplay) {
+        dbPathDisplay.textContent = t('noDatabaseSelected');
+        dbPathDisplay.title = '';
+    }
+
+    updateConnectionUI(false);
+    mainContent.classList.add('hidden');
+    if (welcomeState) {
+        welcomeState.classList.remove('hidden');
+    }
+}
+
+// 「データベースを開く」フロー: ネイティブダイアログ → DB を開いて UI を更新
+async function openDatabaseFlow() {
     try {
-        // 接続ボタンを無効化
-        connectBtn.disabled = true;
-        connectBtn.classList.add('opacity-50', 'cursor-not-allowed');
+        const api = await pyApi();
+        const pick = await api.pick_directory();
 
-        // ヘルスチェック
-        const response = await fetch(`${url}/api/health`);
-        const data = await response.json();
-
-        if (data.status !== 'ok') {
-            throw new Error(t('toast.serverNotResponding'));
+        if (pick.status === 'cancelled') {
+            return;
+        }
+        if (pick.status !== 'success' || !pick.path) {
+            showToast(pick.message || 'Failed to open dialog', 'error');
+            return;
         }
 
-        apiUrl = url;
-        isConnected = true;
+        const result = await api.open_database(pick.path);
+        if (result.status !== 'success') {
+            showToast(t('toast.serverConnectionFailed') + ': ' + (result.message || ''), 'error');
+            return;
+        }
 
-        // データベースパスを保存
-        databasePath = data.database_path || 'Unknown';
+        // 自動更新を一旦停止 (新DBに対して再開)
+        stopAutoRefresh();
 
-        // 接続先URLを保存
-        localStorage.setItem('rocksdb_api_url', url);
-
-        // UI更新：接続状態
-        updateConnectionUI(true);
-
-        // メインコンテンツ表示
-        mainContent.classList.remove('hidden');
-
-        // カラムファミリー一覧を取得
+        applyConnectedState(result.database_path);
+        sortOrder = 'none';
         await loadColumnFamilies();
 
-        // 自動更新が有効な場合は開始
         if (autoRefreshEnabled) {
             startAutoRefresh();
         }
 
         showToast(t('toast.serverConnected'), 'success');
     } catch (error) {
-        console.error('接続エラー:', error);
+        console.error('Open database error:', error);
         showToast(t('toast.serverConnectionFailed') + ': ' + error.message, 'error');
-
-        // ステータスをエラーに
-        dbStatus.innerHTML = `
-            <span class="w-2 h-2 mr-2 rounded-full bg-red-500"></span>
-            ${t('connectionFailed')}
-        `;
-        dbStatus.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-red-100 text-red-700';
-
-        // 接続ボタンを有効化
-        connectBtn.disabled = false;
-        connectBtn.classList.remove('opacity-50', 'cursor-not-allowed');
     }
-}
-
-// サーバから切断
-function disconnectFromServer() {
-    // 接続情報を表示
-    const message = t('confirm.disconnect')
-        .replace('%api%', apiUrl)
-        .replace('%db%', databasePath);
-
-    if (!confirm(message)) {
-        return;
-    }
-
-    // 自動更新を停止
-    stopAutoRefresh();
-
-    // 状態をクリア
-    apiUrl = '';
-    databasePath = '';
-    currentColumnFamily = '';
-    isConnected = false;
-    sortOrder = 'none';
-
-    // UI更新：切断状態
-    updateConnectionUI(false);
-
-    // メインコンテンツを非表示
-    mainContent.classList.add('hidden');
-
-    // テーブルをクリア
-    dataTableBody.innerHTML = '';
-    entryCount.textContent = '0';
-
-    showToast(t('toast.serverDisconnected'), 'info');
 }
 
 // 接続状態に応じたUI更新
 function updateConnectionUI(connected) {
     if (connected) {
-        // 接続済み状態
         dbStatus.innerHTML = `
             <span class="w-2 h-2 mr-2 rounded-full bg-green-500 animate-pulse"></span>
             <span data-i18n="connected">${t('connected')}</span>
         `;
         dbStatus.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-700';
-
-        // 接続ボタンを非表示、切断ボタンを表示
-        connectBtn.classList.add('hidden');
-        disconnectBtn.classList.remove('hidden');
-
-        // 入力フィールドを無効化
-        apiUrlInput.disabled = true;
-        apiUrlInput.classList.add('bg-gray-100', 'cursor-not-allowed');
     } else {
-        // 未接続状態
         dbStatus.innerHTML = `
             <span class="w-2 h-2 mr-2 rounded-full bg-gray-400"></span>
             <span data-i18n="notConnected">${t('notConnected')}</span>
         `;
         dbStatus.className = 'inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-600';
-
-        // 切断ボタンを非表示、接続ボタンを表示
-        disconnectBtn.classList.add('hidden');
-        connectBtn.classList.remove('hidden');
-        connectBtn.disabled = false;
-        connectBtn.classList.remove('opacity-50', 'cursor-not-allowed');
-
-        // 入力フィールドを有効化
-        apiUrlInput.disabled = false;
-        apiUrlInput.classList.remove('bg-gray-100', 'cursor-not-allowed');
     }
 }
 
@@ -539,8 +549,8 @@ function updateAutoRefreshUI(enabled) {
 // カラムファミリーの一覧を取得
 async function loadColumnFamilies() {
     try {
-        const response = await fetch(`${apiUrl}/api/column-families`);
-        const data = await response.json();
+        const api = await pyApi();
+        const data = await api.get_column_families();
 
         if (data.status !== 'success') {
             throw new Error(data.message);
@@ -575,17 +585,9 @@ async function updateTable(silent = false) {
     try {
         showLoading(true);
 
-        // 検索キーワードを取得
         const searchTerm = searchInput.value.trim();
-
-        // データを取得
-        let url = `${apiUrl}/api/data/${currentColumnFamily}`;
-        if (searchTerm) {
-            url += `?search=${encodeURIComponent(searchTerm)}`;
-        }
-
-        const response = await fetch(url);
-        const result = await response.json();
+        const api = await pyApi();
+        const result = await api.get_data(currentColumnFamily, searchTerm || null);
 
         if (result.status !== 'success') {
             throw new Error(result.message);
@@ -700,8 +702,8 @@ function toggleSort() {
 // データをエクスポート
 async function exportData() {
     try {
-        const response = await fetch(`${apiUrl}/api/export/${currentColumnFamily}`);
-        const result = await response.json();
+        const api = await pyApi();
+        const result = await api.export_data(currentColumnFamily);
 
         if (result.status !== 'success') {
             throw new Error(result.message);
@@ -733,15 +735,8 @@ async function importData(event) {
         const text = await file.text();
         const data = JSON.parse(text);
 
-        const response = await fetch(`${apiUrl}/api/import/${currentColumnFamily}`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(data)
-        });
-
-        const result = await response.json();
+        const api = await pyApi();
+        const result = await api.import_data(currentColumnFamily, data);
 
         if (result.status !== 'success') {
             throw new Error(result.message);
@@ -787,9 +782,8 @@ function closeEditModal() {
 // エントリーを編集
 async function editEntry(key) {
     try {
-        const encodedKey = encodeURIComponent(key);
-        const response = await fetch(`${apiUrl}/api/data/${currentColumnFamily}/${encodedKey}`);
-        const result = await response.json();
+        const api = await pyApi();
+        const result = await api.get_data_by_key(currentColumnFamily, key);
 
         if (result.status !== 'success') {
             throw new Error(result.message);
@@ -873,14 +867,8 @@ async function deleteEntry(key) {
     }
 
     try {
-        // URLエンコードを使用してキーを正しく送信
-        // これにより、スペースや特殊文字を含むキーでも正しく処理されます
-        const encodedKey = encodeURIComponent(key);
-        const response = await fetch(`${apiUrl}/api/data/${currentColumnFamily}/${encodedKey}`, {
-            method: 'DELETE'
-        });
-
-        const result = await response.json();
+        const api = await pyApi();
+        const result = await api.delete_data(currentColumnFamily, key);
 
         if (result.status !== 'success') {
             throw new Error(result.message);
@@ -902,11 +890,8 @@ async function clearAll() {
     }
 
     try {
-        const response = await fetch(`${apiUrl}/api/data/${currentColumnFamily}/clear`, {
-            method: 'DELETE'
-        });
-
-        const result = await response.json();
+        const api = await pyApi();
+        const result = await api.clear_data(currentColumnFamily);
 
         if (result.status !== 'success') {
             throw new Error(result.message);
@@ -974,14 +959,16 @@ function initializeEventListeners() {
     // 言語設定を読み込む
     loadLanguagePreference();
 
-    // 保存されたURLを復元
-    loadSavedUrl();
+    // 自動更新設定を読み込む
+    loadAutoRefreshPreference();
 
-    // サーバ接続
-    connectBtn.addEventListener('click', connectToServer);
+    // テーマ設定を読み込む
+    loadThemePreference();
 
-    // サーバ切断
-    disconnectBtn.addEventListener('click', disconnectFromServer);
+    // データベースを開くボタン
+    if (openDbBtn) {
+        openDbBtn.addEventListener('click', openDatabaseFlow);
+    }
 
     // カラムファミリー変更
     columnFamilySelect.addEventListener('change', async (e) => {
@@ -1025,15 +1012,8 @@ function initializeEventListeners() {
         }
 
         try {
-            const response = await fetch(`${apiUrl}/api/data/${currentColumnFamily}`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ key, value })
-            });
-
-            const result = await response.json();
+            const api = await pyApi();
+            const result = await api.set_data(currentColumnFamily, key, value);
 
             if (result.status !== 'success') {
                 throw new Error(result.message);
@@ -1054,14 +1034,11 @@ function initializeEventListeners() {
             closeEditModal();
         }
     });
-
-    // Enterキーでサーバ接続
-    apiUrlInput.addEventListener('keypress', (e) => {
-        if (e.key === 'Enter') {
-            connectToServer();
-        }
-    });
 }
 
-// ページ読み込み完了時にイベントリスナーを初期化
-document.addEventListener('DOMContentLoaded', initializeEventListeners);
+// 起動シーケンス: DOM準備 → イベントリスナー → pywebview API 経由でDB接続
+document.addEventListener('DOMContentLoaded', () => {
+    initializeEventListeners();
+    // pywebview の API 準備を待ってから自動接続
+    connectToDatabase();
+});
