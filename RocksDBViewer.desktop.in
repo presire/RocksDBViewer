@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Name=RocksDB Viewer
+GenericName=RocksDB database browser
+GenericName[ja]=RocksDBデータベースブラウザ
+Comment=Desktop GUI application for browsing and editing RocksDB databases
+Comment[ja]=RocksDBデータベースの閲覧と編集を行うデスクトップGUIアプリケーション
+Exec=@CMAKE_INSTALL_FULL_BINDIR@/RocksDBViewer %F
+Icon=RocksDBViewer
+Categories=Development;Database;Qt;
+Keywords=rocksdb;database;viewer;editor;kv;key-value;
+Terminal=false
+StartupNotify=true

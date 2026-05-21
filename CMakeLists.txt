@@ -1,0 +1,149 @@
+cmake_minimum_required(VERSION 3.16)
+project(RocksDBViewer VERSION 0.1.0 LANGUAGES CXX)
+
+set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTORCC ON)
+
+# Qt6 path
+set(CMAKE_PREFIX_PATH "/home/suse/InstallSoftware/Qt/6.9.1/gcc_64")
+
+find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 LinguistTools)
+
+# RocksDB
+set(ROCKSDB_ROOT "/home/suse/Program/Qt/Libraries/RocksDB")
+find_library(ROCKSDB_LIBRARY NAMES rocksdb PATHS "${ROCKSDB_ROOT}/lib64" NO_DEFAULT_PATH)
+find_path(ROCKSDB_INCLUDE_DIR NAMES rocksdb/db.h PATHS "${ROCKSDB_ROOT}/include" NO_DEFAULT_PATH)
+
+if(NOT ROCKSDB_LIBRARY)
+    message(FATAL_ERROR "RocksDB library not found at ${ROCKSDB_ROOT}/lib64")
+endif()
+if(NOT ROCKSDB_INCLUDE_DIR)
+    message(FATAL_ERROR "RocksDB headers not found at ${ROCKSDB_ROOT}/include")
+endif()
+
+message(STATUS "RocksDB library: ${ROCKSDB_LIBRARY}")
+message(STATUS "RocksDB include: ${ROCKSDB_INCLUDE_DIR}")
+
+set(SOURCES
+    src/main.cpp
+    src/backend/RocksDBBackend.cpp
+    src/backend/EntryModel.cpp
+    src/backend/FilterProxyModel.cpp
+    src/utils/JsonUtils.cpp
+    src/utils/I18nManager.cpp
+    src/utils/FileSystemModel.cpp
+    src/utils/SettingsMigration.cpp
+)
+
+set(HEADERS
+    src/backend/RocksDBBackend.h
+    src/backend/EntryModel.h
+    src/backend/FilterProxyModel.h
+    src/utils/JsonUtils.h
+    src/utils/I18nManager.h
+    src/utils/FileSystemModel.h
+    src/utils/SettingsMigration.h
+    src/utils/SettingsKeys.h
+)
+
+set(QML_FILES
+    qml/main.qml
+    qml/Theme.qml
+    qml/components/HeaderBar.qml
+    qml/components/DatabasePanel.qml
+    qml/components/ControlBar.qml
+    qml/components/DataTable.qml
+    qml/components/EditModal.qml
+    qml/components/ToastManager.qml
+    qml/components/WelcomePage.qml
+    qml/components/StatsPanel.qml
+    qml/components/SkeletonMenu.qml
+    qml/components/FilePickerDialog.qml
+)
+
+# Translation files
+set(TS_FILES
+    i18n/rocksdbviewer_ja.ts
+    i18n/rocksdbviewer_en.ts
+)
+
+set(QML_MODULE_NAME "RocksDBViewerApp")
+set(EXECUTABLE_NAME "RocksDBViewer")
+
+qt_add_executable(${EXECUTABLE_NAME}
+    ${SOURCES}
+    ${HEADERS}
+)
+
+qt_policy(SET QTP0004 NEW)
+
+qt_add_qml_module(${EXECUTABLE_NAME}
+    URI ${QML_MODULE_NAME}
+    VERSION 1.0
+    QML_FILES ${QML_FILES}
+    RESOURCE_PREFIX /
+    NO_CACHEGEN
+)
+
+# アイコンリソースを別途追加 (QMLモジュールとは独立)
+qt6_add_resources(${EXECUTABLE_NAME} "icons"
+    PREFIX "/RocksDBViewerApp"
+    BASE "${CMAKE_CURRENT_SOURCE_DIR}"
+    FILES
+        assets/RocksDBViewer@128.png
+        assets/RocksDBViewer@256.png
+        assets/RocksDBViewer@512.png
+)
+
+qt_add_translations(${EXECUTABLE_NAME}
+    TS_FILES ${TS_FILES}
+)
+
+target_include_directories(${EXECUTABLE_NAME} PRIVATE
+    src
+    ${ROCKSDB_INCLUDE_DIR}
+)
+
+target_compile_definitions(RocksDBViewer PRIVATE
+    ROCKSDBVIEWER_VERSION="${PROJECT_VERSION}"
+)
+
+target_link_libraries(${EXECUTABLE_NAME} PRIVATE
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Quick
+    Qt6::QuickControls2
+    ${ROCKSDB_LIBRARY}
+)
+
+# Install executable
+install(TARGETS ${EXECUTABLE_NAME}
+    BUNDLE DESTINATION .
+    RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
+)
+
+# Configure and install .desktop file
+configure_file(
+    ${CMAKE_CURRENT_SOURCE_DIR}/RocksDBViewer.desktop.in
+    ${CMAKE_CURRENT_BINARY_DIR}/RocksDBViewer.desktop
+    @ONLY
+)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RocksDBViewer.desktop
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
+)
+
+# Install icon files to hicolor theme (multiple sizes)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@128.png
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/128x128/apps
+    RENAME RocksDBViewer.png
+)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@256.png
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps
+    RENAME RocksDBViewer.png
+)
+install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@512.png
+    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/512x512/apps
+    RENAME RocksDBViewer.png
+)

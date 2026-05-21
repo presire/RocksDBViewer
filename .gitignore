@@ -1,0 +1,89 @@
+# Build directories
+build/
+Debug/
+Release/
+cmake-build-*/
+
+# Qt Creator
+*.user
+*.user.*
+.qtcreator/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# AI Assistants
+.claude/
+.opencode/
+.kimi/
+CLAUDE.md
+AGENTS.md
+.mcp.json
+opencode.json
+opencode.jsonc
+kimi-mcp.json
+kimi-mcp.jsonc
+
+# Compiled Object files
+*.slo
+*.lo
+*.o
+*.obj
+
+# Precompiled Headers
+*.gch
+*.pch
+
+# Compiled Dynamic libraries
+*.so
+*.dylib
+*.dll
+
+# Compiled Static libraries
+*.lai
+*.la
+*.a
+*.lib
+
+# Executables
+*.exe
+*.out
+*.app
+
+# Qt
+moc_*.cpp
+moc_*.h
+qrc_*.cpp
+ui_*.h
+*.qmlc
+*.jsc
+Makefile*
+*.qm
+
+# CMake
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+install_manifest.txt
+compile_commands.json
+CTestTestfile.cmake
+_deps/
+
+# macOS
+.DS_Store
+
+# Windows
+Thumbs.db
+desktop.ini
+
+# RocksDB database files (if generated during testing)
+*.ldb
+*.log
+CURRENT
+LOCK
+MANIFEST-*
+sample_rocksdb/

@@ -1,370 +1,151 @@
-# RocksDB GUI Viewer
+# RocksDB Viewer (Qt/QML Edition)
 
-A GUI tool for operating RocksDB databases from a browser. Access RocksDB via REST API and intuitively browse, edit, and delete data.
+A desktop GUI application for browsing and editing RocksDB databases,  
+built with **Qt 6.9.1 Quick (QML)** and **C++20**.  
 
-## Overview
+This is a native reimplementation of the original Python/pywebview/HTML-based RocksDBViewer,  
+offering the same feature set with native performance and no browser/WebView dependency.  
 
-This tool consists of the following components:
+## Requirements
 
-1. **Create_RocksDB.py** - Sample database creation script (for initial setup)
-2. **RocksDB_API_Server.py** - REST API server for accessing RocksDB (Python/Flask)
-3. **RocksDBViewer.html** - Web interface for data manipulation
-4. **rocksdb-manager.js** - JavaScript code managing UI and API server integration
+- **Qt** 6.5 or later (tested with 6.9.1)
+- **RocksDB** C++ library (tested with 11.1.1)
+- **CMake** 3.16 or later
+- **C++ Compiler** with C++20 support (GCC 11+, Clang 14+, MSVC 2019+)
 
-## Setup
+## Build
 
-### Requirements
-
-- Python 3.7 or higher
-- Modern web browser (Chrome, Firefox, Safari, etc.)
-
-### Installing Python Packages
+### 1. Configure
 
 ```bash
-pip3 install flask flask-cors rocksdict
+mkdir build && cd build
+
+cmake .. -DCMAKE_BUILD_TYPE=Release
+
+# Or cmake with Qt path
+# cmake .. -DCMAKE_PREFIX_PATH=/path/to/qt/6.9.1/gcc_64 -DCMAKE_BUILD_TYPE=Release
 ```
 
-### File Structure
-
-```
-project/
-├── Create_RocksDB.py          # Sample database creation script
-├── RocksDB_API_Server.py      # API server
-├── RocksDBViewer.html         # HTML interface
-├── js/
-│   └── rocksdb-manager.js    # JavaScript code
-├── css/
-│   ├── core.css              # Basic styles (optional)
-│   └── tailwind.css          # Tailwind CSS styles (optional)
-└── sample_rocksdb/            # RocksDB database (auto-generated)
-```
-
-**Note**  
-CSS files are referenced in the HTML file, but since Tailwind utility classes are used, they can also be loaded via CDN.
-
-## Usage
-
-### 0. Creating a Sample Database (First Time Only)
-
-If you want to try with sample data, you can create a sample database using the included `Create_RocksDB.py` script.
+### 2. Build
 
 ```bash
-# Create sample database at default path (./sample_rocksdb)
-python3 Create_RocksDB.py
-
-# Create sample database at custom path
-python3 Create_RocksDB.py /path/to/your/rocksdb
+cmake --build . -j$(nproc)
 ```
 
-**Sample data created:**
-- `default` - Application basic information and settings (7 records)
-- `users` - User information (5 records)
-- `products` - Product data (7 records)
-- `orders` - Order history (5 records)
-- `config` - System configuration (17 records)
-- `logs` - Application logs (20 records)
-
-After running the script, the following will be displayed:
-
-```
-Sample database creation completed!
-Database path: /absolute/path/to/sample_rocksdb
-
-Created column families:
-   • default      :   7 records
-   • users        :   5 records
-   • products     :   7 records
-   • orders       :   5 records
-   • config       :  17 records
-   • logs         :  20 records
-```
-
-**Note**  
-If an existing database exists, an overwrite confirmation prompt will be displayed.
-
-### 1. Starting the API Server
-
-First, start the RocksDB API server.
+## Run
 
 ```bash
-# Using default path (./sample_rocksdb)
-python3 RocksDB_API_Server.py
+# Launch without database
+./RocksDBViewer
 
-# Specifying a custom database path
-python3 RocksDB_API_Server.py /path/to/your/rocksdb
+# Launch with a specific database path
+./RocksDBViewer /path/to/your/rocksdb
 ```
 
-When the server starts successfully, the following will be displayed:
-
-```
-============================================================
-RocksDB REST API Server
-============================================================
-
-Database path: /absolute/path/to/sample_rocksdb
-Server URL: http://localhost:5000
-
-Available endpoints:
-  GET    /api/health                     - Health check
-  GET    /api/column-families            - Column family list
-  GET    /api/data/<cf>                  - Get all data
-  ...
-
-To stop server: Ctrl+C
-============================================================
-```
-
-### 2. Opening the HTML Viewer
-
-1. Open `RocksDBViewer.html` in a web browser
-2. Enter `http://localhost:5000` in the "API Server URL" field (preset by default)
-3. Click the "Connect to Server" button
-
-When the connection is successful, the status in the upper right of the screen changes to "Connected" and the main content is displayed.
-
-### 3. Data Operations
-
-#### Selecting a Column Family
-
-Select the column family you want to work with from the dropdown menu at the top of the screen.
-
-Available column families:
-- `default` - Default column family
-- `users` - User information
-- `products` - Product information
-- `orders` - Order information
-- `config` - Configuration information
-- `logs` - Log information
-
-#### Displaying Data
-
-All keys and values of the selected column family are displayed in table format.
-
-#### Searching Data
-
-Enter a keyword in the search box to filter data containing it in keys or values in real-time.
-
-#### Adding/Editing Data
-
-1. Click the "Add New" button (or click the "Edit" button for existing data)
-2. Enter key and value in the modal dialog
-3. Click the "Save" button
-
-**JSON Editing Features:**
-- "Format" button - Format JSON for easy viewing
-- "Minify" button - Compress JSON to a single line
-- Real-time JSON validation - Check syntax errors during input
-
-#### Deleting Data
-
-- **Individual deletion**: Click the "Delete" button for each data row
-- **Delete all**: Delete all data in the currently selected column family with the "Clear All" button
-
-#### Exporting Data
-
-Click the "Export" button to download data from the currently selected column family in JSON format.
-
-#### Importing Data
-
-1. Click the "Import" button
-2. Select a JSON format file
-3. Data is automatically imported
-
-**Import file format:**
-```json
-{
-  "key1": "value1",
-  "key2": {"name": "example", "age": 30},
-  "key3": "value3"
-}
-```
-
-## API Endpoints
-
-The API server provides the following endpoints:
-
-### Health Check
-```
-GET /api/health
-```
-Get server status and database information
-
-### Column Family List
-```
-GET /api/column-families
-```
-Get list of available column families
-
-### Get Data
-```
-GET /api/data/<column_family>
-GET /api/data/<column_family>?search=keyword
-GET /api/data/<column_family>/<key>
-```
-Get data (all, search, key-specific)
-
-### Add/Update Data
-```
-POST /api/data/<column_family>
-Content-Type: application/json
-
-{
-  "key": "my-key",
-  "value": "my-value"
-}
-```
-
-### Delete Data
-```
-DELETE /api/data/<column_family>/<key>
-DELETE /api/data/<column_family>/clear
-```
-Individual deletion or delete all
-
-### Export
-```
-GET /api/export/<column_family>
-```
-Export data in JSON format
-
-### Import
-```
-POST /api/import/<column_family>
-Content-Type: application/json
-
-{
-  "key1": "value1",
-  "key2": "value2"
-}
-```
-
-## Usage Examples
-
-### Example 1: User Information Management
-
-```json
-// Key: user:1001
-// Value:
-{
-  "id": 1001,
-  "name": "Taro Yamada",
-  "email": "taro@example.com",
-  "role": "admin"
-}
-```
-
-### Example 2: Configuration Storage
-
-```json
-// Key: config:app
-// Value:
-{
-  "app_name": "MyApp",
-  "version": "1.0.0",
-  "debug_mode": false
-}
-```
-
-### Example 3: Simple Cache Data
-
-```
-Key: cache:session:abc123
-Value: {"user_id": 42, "expires": 1234567890}
-```
-
-## Feature List
-
-### Main Features
-
-- ✅ Real-time search and filtering
-- ✅ JSON syntax validation and formatting
-- ✅ Data import/export (JSON format)
-- ✅ Multiple column family support
-- ✅ Responsive design (mobile compatible)
-- ✅ Copy to clipboard functionality
-- ✅ Operation feedback via toast notifications
-- ✅ Data addition, editing, and deletion
-- ✅ Custom scrollbar
-- ✅ Language toggle (Japanese/English)
-
-### UI Features
-
-- Smooth user experience with animation effects
-- Visual feedback through color coding
-- Automatic truncation display for long data
-- Automatic detection and badge display for JSON data
-
-## Security Notes
-
-- This tool is intended for use in **development environments**
-- If using in production, implement the following measures:
-  - Authentication and authorization
-  - Use HTTPS communication
-  - Review CORS settings
-  - Strengthen input validation
-  - Implement API rate limiting
-
-## Troubleshooting
-
-### Cannot Connect to Server
-
-**Cause 1**: API server is not running
+> **Note:**  
+> If RocksDB shared library is not in the system library path, set `LD_LIBRARY_PATH`:  
 
 ```bash
-# Start the server
-python3 RocksDB_API_Server.py
+export LD_LIBRARY_PATH=/path/to/rocksdb/lib:$LD_LIBRARY_PATH
+./RocksDBViewer
 ```
 
-**Cause 2**: Incorrect URL
+## Features
 
-- Default URL: `http://localhost:5000`
-- Change port number appropriately if using a different port
+- **Native desktop GUI** — No browser or HTTP server required
+- **Direct RocksDB access** — Uses the official RocksDB C++ API
+- **Column Family support** — Browse and switch between multiple column families
+- **CRUD operations** — Add, edit, delete, and clear all entries
+- **Real-time search** — Filter entries by key or value content
+- **Prefix search** — Quickly find keys starting with a specific string
+- **Pagination** — Browse large datasets with configurable page sizes
+- **Sort** — Toggle between original, ascending, and descending order
+- **Database statistics** — Live display of entry counts, column families, and disk usage
+- **JSON helpers** — Format, minify, validate, and generate skeleton templates in the editor
+- **Import / Export** — JSON file I/O
+- **Auto-refresh** — Optional 10-second interval polling
+- **Recent databases** — Quick access to previously opened paths (up to 10)
+- **Custom file picker** — Folder and file selection dialog with keyboard navigation
+- **Internationalization** — Japanese / English language switch with persistent preference
+- **Theme switch** — Light / Dark mode with persistent preference
+- **Window state persistence** — Remembers size, position, and display preferences
+- **Settings migration** — Automatic migration from legacy storage format
+- **Keyboard shortcuts** — Quick access via keyboard for common actions
 
-**Cause 3**: CORS error
+## Keyboard Shortcuts
 
-- Verify that CORS is enabled on the API server
-- Check error messages in the browser console
+| Shortcut | Action |
+|----------|--------|
+| Ctrl+O | Open database |
+| Ctrl+R | Refresh data |
+| Ctrl+N | Add new entry |
+| Ctrl+F | Focus search field |
+| Ctrl+T | Toggle theme |
+| Ctrl+Q | Quit application |
 
-### Database Not Found
+## Project Structure
+
+```
+RocksDBViewer/
+├── CMakeLists.txt
+├── README.md
+├── LICENSE
+├── src/
+│   ├── main.cpp
+│   ├── backend/
+│   │   ├── RocksDBBackend.h/.cpp    # DB operations, CRUD, file I/O
+│   │   ├── EntryModel.h/.cpp        # QAbstractListModel for table data
+│   │   └── FilterProxyModel.h/.cpp  # Search + sort proxy model
+│   └── utils/
+│       ├── JsonUtils.h/.cpp         # JSON format/minify/validate/skeleton
+│       ├── I18nManager.h/.cpp       # Language switching
+│       ├── FileSystemModel.h/.cpp   # File system model for custom picker
+│       ├── SettingsMigration.h/.cpp # Settings storage migration
+│       └── SettingsKeys.h           # Settings key constants
+├── qml/
+│   ├── main.qml                     # Main window layout
+│   ├── Theme.qml                    # Theme constants
+│   └── components/
+│       ├── HeaderBar.qml
+│       ├── DatabasePanel.qml
+│       ├── ControlBar.qml
+│       ├── DataTable.qml
+│       ├── EditModal.qml
+│       ├── ToastManager.qml
+│       ├── WelcomePage.qml
+│       ├── StatsPanel.qml
+│       ├── SkeletonMenu.qml
+│       └── FilePickerDialog.qml
+├── i18n/
+│   ├── rocksdbviewer_ja.ts          # Japanese translations
+│   └── rocksdbviewer_en.ts          # English translations (source)
+├── assets/
+│   ├── RocksDBViewer@128.png
+│   ├── RocksDBViewer@256.png
+│   └── RocksDBViewer@512.png
+└── tools/
+    └── create_sample_db.cpp         # Sample database generator
+```
+
+## Updating Translations
+
+After modifying source strings in `.cpp` or `.qml` files:
 
 ```bash
-# Create sample database
-python3 Create_RocksDB.py ./Example
+# Extract strings
+lupdate src qml -ts i18n/rocksdbviewer_ja.ts i18n/rocksdbviewer_en.ts
 
-# Or create at default path
-python3 Create_RocksDB.py
+# Edit .ts files (e.g., with Qt Linguist or text editor)
+
+# Generate .qm files
+lrelease i18n/rocksdbviewer_ja.ts i18n/rocksdbviewer_en.ts
 ```
-
-### Data Not Displaying
-
-1. Check if the column family is correctly selected
-2. Check if data exists in the database
-3. Check error logs in the browser console
-
-### Errors During JSON Editing
-
-- Verify that the JSON format is correct
-- Use double quotes (`"`) (single quotes not allowed)
-- Be careful with trailing commas
 
 ## License
 
-This project is freely available for educational and development purposes.
+This project is licensed under the [MIT License](LICENSE).  
 
-## Contributing
-
-Bug reports and feature improvement suggestions are welcome.
-
-## Support
-
-If you encounter problems, check the following:
-1. Python and packages are correctly installed
-2. Database path is correct
-3. TCP port 5000 is not being used by other programs
-4. Error messages in the browser's JavaScript console
-
----
-
-<br>
-
-**Enjoy using RocksDB GUI Viewer!**
+Third-party licenses:  
+- [RocksDB](https://github.com/facebook/rocksdb) is licensed under the [Apache License, Version 2.0](https://github.com/facebook/rocksdb/blob/main/LICENSE.Apache)  
+  and includes code under the [BSD 3-Clause License](https://github.com/facebook/rocksdb/blob/main/LICENSE.leveldb). See the `licenses/` directory for copies.  
+- [Qt](https://www.qt.io/) is licensed under the [LGPL v3](https://www.gnu.org/licenses/lgpl-3.0.html).
