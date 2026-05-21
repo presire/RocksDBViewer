@@ -7,12 +7,9 @@ set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
 
 # Qt6 path
-set(CMAKE_PREFIX_PATH "/home/suse/InstallSoftware/Qt/6.9.1/gcc_64")
-
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 LinguistTools)
 
 # RocksDB
-set(ROCKSDB_ROOT "/home/suse/Program/Qt/Libraries/RocksDB")
 find_library(ROCKSDB_LIBRARY NAMES rocksdb PATHS "${ROCKSDB_ROOT}/lib64" NO_DEFAULT_PATH)
 find_path(ROCKSDB_INCLUDE_DIR NAMES rocksdb/db.h PATHS "${ROCKSDB_ROOT}/include" NO_DEFAULT_PATH)
 
@@ -147,3 +144,16 @@ install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@512.png
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/512x512/apps
     RENAME RocksDBViewer.png
 )
+
+# CPack RPM configuration
+set(CPACK_PACKAGE_NAME "RocksDBViewer")
+set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+set(CPACK_PACKAGE_VENDOR "Presire")
+set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Desktop GUI for browsing and editing RocksDB databases")
+set(CPACK_GENERATOR "RPM")
+set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+set(CPACK_RPM_PACKAGE_GROUP "Development/Tools")
+set(CPACK_RPM_PACKAGE_REQUIRES "qt6-core >= 6.5, qt6-gui >= 6.5, qt6-quick >= 6.5, qt6-quickcontrols2 >= 6.5")
+set(CPACK_RPM_PACKAGE_URL "https://github.com/presire/RocksDBViewer")
+set(CPACK_RPM_PACKAGE_DESCRIPTION "A native desktop application for browsing and editing RocksDB databases, built with Qt6/QML and C++20.")
+include(CPack)
