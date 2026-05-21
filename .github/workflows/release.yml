@@ -4,6 +4,7 @@ on:
   push:
     tags:
       - 'v*'
+  workflow_dispatch:
 
 permissions:
   contents: write
@@ -18,7 +19,7 @@ jobs:
           - distro: tumbleweed
             image: opensuse/tumbleweed
           - distro: leap
-            image: docker.io/opensuse/leap:16.0
+            image: opensuse/leap:16.0
     container:
       image: ${{ matrix.image }}
     steps:
