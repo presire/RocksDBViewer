@@ -1,86 +1,229 @@
-name: Release RPM
+name: Release
 
 on:
   push:
-    tags:
-      - 'v*'
-  workflow_dispatch:
+    tags: ['v*']
 
 permissions:
   contents: write
 
 jobs:
-  build-rpm:
+  validate:
     runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - distro: tumbleweed
-            image: opensuse/tumbleweed
-          - distro: leap
-            image: opensuse/leap:16.0
-    container:
-      image: ${{ matrix.image }}
+    outputs:
+      version: ${{ steps.version.outputs.VERSION }}
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Install build dependencies
+      - name: Extract and validate version
+        id: version
+        run: |
+          tag_ver="${GITHUB_REF_NAME#v}"
+          cmake_ver=$(grep -oP 'project\(RocksDBViewer VERSION \K[0-9.]+' CMakeLists.txt)
+          if [ "$tag_ver" != "$cmake_ver" ]; then
+            echo "::error::Tag version ($tag_ver) does not match CMakeLists.txt version ($cmake_ver)"
+            exit 1
+          fi
+          echo "VERSION=$tag_ver" >> "$GITHUB_OUTPUT"
+          echo "Version: $tag_ver"
+
+  build-rpm-tumbleweed:
+    needs: validate
+    runs-on: ubuntu-latest
+    container:
+      image: opensuse/tumbleweed:latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
         run: |
           zypper --non-interactive refresh
           zypper --non-interactive install -y \
-            cmake \
-            gcc-c++ \
-            git \
-            qt6-core-devel \
-            qt6-gui-devel \
-            qt6-quick-devel \
-            qt6-quickcontrols2-devel \
-            qt6-linguist-devel \
-            rpm-build \
-            snappy-devel \
-            zlib-devel \
-            libbz2-devel \
-            liblz4-devel \
-            libzstd-devel \
-            liburing2-devel \
-            gflags-devel
+            cmake gcc-c++ git rpm-build \
+            qt6-core-devel qt6-gui-devel qt6-quick-devel \
+            qt6-quickcontrols2-devel qt6-linguist-devel \
+            snappy-devel zlib-devel libbz2-devel liblz4-devel \
+            libzstd-devel liburing2-devel gflags-devel
 
-      - name: Build and install RocksDB
+      - name: Build RocksDB
         run: |
           git clone --depth 1 --branch v11.1.1 https://github.com/facebook/rocksdb.git /tmp/rocksdb
-          cd /tmp/rocksdb
-          sed -i 's/-Werror/-Wno-error/g' CMakeLists.txt
-          cmake -B build \
+          cmake -S /tmp/rocksdb -B /tmp/rocksdb/build \
             -DCMAKE_BUILD_TYPE=Release \
             -DWITH_TESTS=OFF \
             -DWITH_TOOLS=OFF \
+            -DFAIL_ON_WARNINGS=OFF \
             -DCMAKE_INSTALL_PREFIX=/usr/local
-          cmake --build build -j$(nproc)
-          cmake --install build
-          ldconfig
-          # Verify installation location
-          ls -la /usr/local/lib64/librocksdb.so* 2>/dev/null || ls -la /usr/local/lib/librocksdb.so*
-
-      - name: Configure RocksDBViewer
-        run: |
-          cmake -B build \
-            -DCMAKE_BUILD_TYPE=Release \
-            -DCMAKE_PREFIX_PATH=/usr \
-            -DROCKSDB_ROOT=/usr/local
+          cmake --build /tmp/rocksdb/build --parallel $(nproc)
+          cmake --install /tmp/rocksdb/build
+          ldconfig || true
 
       - name: Build RocksDBViewer
-        run: cmake --build build -j$(nproc)
+        run: |
+          cmake -B build \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DROCKSDB_ROOT=/usr/local
+          cmake --build build --parallel $(nproc)
 
-      - name: Generate RPM package
+      - name: Package RPM
         run: |
           cd build
           cpack -G RPM
-          # Rename artifact to include tag and distro name
-          mv RocksDBViewer-*.rpm "../RocksDBViewer-${{ github.ref_name }}-${{ matrix.distro }}.x86_64.rpm"
 
-      - name: Upload RPM to GitHub Release
-        uses: softprops/action-gh-release@v2
+      - name: Rename artifact
+        run: |
+          cd build
+          for f in *.rpm; do
+            mv "$f" "RocksDBViewer-${{ needs.validate.outputs.version }}-tumbleweed.x86_64.rpm"
+          done
+
+      - uses: actions/upload-artifact@v4
         with:
-          files: RocksDBViewer-*.rpm
+          name: RocksDBViewer-${{ needs.validate.outputs.version }}-tumbleweed.x86_64.rpm
+          path: build/*.rpm
+
+  build-rpm-leap16:
+    needs: validate
+    runs-on: ubuntu-latest
+    container:
+      image: opensuse/leap:16.0
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          zypper --non-interactive refresh
+          zypper --non-interactive install -y \
+            cmake gcc-c++ git rpm-build \
+            qt6-core-devel qt6-gui-devel qt6-quick-devel \
+            qt6-quickcontrols2-devel qt6-linguist-devel \
+            snappy-devel zlib-devel libbz2-devel liblz4-devel \
+            libzstd-devel liburing2-devel gflags-devel
+
+      - name: Build RocksDB
+        run: |
+          git clone --depth 1 --branch v11.1.1 https://github.com/facebook/rocksdb.git /tmp/rocksdb
+          cmake -S /tmp/rocksdb -B /tmp/rocksdb/build \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DWITH_TESTS=OFF \
+            -DWITH_TOOLS=OFF \
+            -DFAIL_ON_WARNINGS=OFF \
+            -DCMAKE_INSTALL_PREFIX=/usr/local
+          cmake --build /tmp/rocksdb/build --parallel $(nproc)
+          cmake --install /tmp/rocksdb/build
+          ldconfig || true
+
+      - name: Build RocksDBViewer
+        run: |
+          cmake -B build \
+            -DCMAKE_INSTALL_PREFIX=/usr \
+            -DCMAKE_BUILD_TYPE=Release \
+            -DROCKSDB_ROOT=/usr/local
+          cmake --build build --parallel $(nproc)
+
+      - name: Package RPM
+        run: |
+          cd build
+          cpack -G RPM
+
+      - name: Rename artifact
+        run: |
+          cd build
+          for f in *.rpm; do
+            mv "$f" "RocksDBViewer-${{ needs.validate.outputs.version }}-leap16.x86_64.rpm"
+          done
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RocksDBViewer-${{ needs.validate.outputs.version }}-leap16.x86_64.rpm
+          path: build/*.rpm
+
+  build-windows:
+    needs: validate
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Ninja
+        run: choco install ninja
+
+      - name: Setup MSVC
+        uses: ilammy/msvc-dev-cmd@v1
+
+      - name: Install Qt
+        uses: jurplel/install-qt-action@v4
+        with:
+          version: '6.9.1'
+          host: 'windows'
+          target: 'desktop'
+          arch: 'win64_msvc2022_64'
+          cache: true
+
+      - name: Build RocksDB
+        shell: powershell
+        run: |
+          git clone --depth 1 --branch v11.1.1 https://github.com/facebook/rocksdb.git C:\rocksdb-src
+          cmake -S C:\rocksdb-src -B C:\rocksdb-src\build `
+            -G "Ninja Multi-Config" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DWITH_TESTS=OFF `
+            -DWITH_TOOLS=OFF `
+            -DROCKSDB_BUILD_SHARED=OFF `
+            -DPORTABLE=1 `
+            -DROCKSDB_INSTALL_ON_WINDOWS=ON `
+            -DCMAKE_INSTALL_PREFIX=C:\rocksdb-install `
+            -DWITH_GFLAGS=OFF `
+            -DWITH_JEMALLOC=OFF `
+            -DFAIL_ON_WARNINGS=OFF
+          cmake --build C:\rocksdb-src\build --config Release
+          cmake --install C:\rocksdb-src\build --config Release
+
+      - name: Build RocksDBViewer
+        shell: powershell
+        run: |
+          cmake -B build -S . -G "Ninja Multi-Config" `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DROCKSDB_ROOT=C:\rocksdb-install
+          cmake --build build --config Release
+
+      - name: Deploy Qt dependencies
+        shell: powershell
+        run: |
+          mkdir deploy
+          cp build\Release\RocksDBViewer.exe deploy\
+          windeployqt --release --qmldir .\qml --no-translations --no-compiler-runtime deploy\RocksDBViewer.exe
+
+      - name: Package ZIP
+        shell: powershell
+        run: |
+          Compress-Archive -Path deploy\* -DestinationPath RocksDBViewer-${{ needs.validate.outputs.version }}-windows-x64.zip
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RocksDBViewer-${{ needs.validate.outputs.version }}-windows-x64.zip
+          path: RocksDBViewer-${{ needs.validate.outputs.version }}-windows-x64.zip
+
+  release:
+    needs: [validate, build-rpm-tumbleweed, build-rpm-leap16, build-windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: true
+
+      - name: List artifacts
+        run: ls -la artifacts/
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "RocksDBViewer ${{ needs.validate.outputs.version }}" \
+            --generate-notes \
+            artifacts/*

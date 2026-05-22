@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(RocksDBViewer VERSION 0.1.0 LANGUAGES CXX)
+project(RocksDBViewer VERSION 1.2.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -10,7 +10,7 @@ set(CMAKE_AUTORCC ON)
 find_package(Qt6 REQUIRED COMPONENTS Core Gui Quick QuickControls2 LinguistTools)
 
 # RocksDB
-find_library(ROCKSDB_LIBRARY NAMES rocksdb PATHS "${ROCKSDB_ROOT}/lib64" NO_DEFAULT_PATH)
+find_library(ROCKSDB_LIBRARY NAMES rocksdb PATHS "${ROCKSDB_ROOT}/lib64" "${ROCKSDB_ROOT}/lib" NO_DEFAULT_PATH)
 find_path(ROCKSDB_INCLUDE_DIR NAMES rocksdb/db.h PATHS "${ROCKSDB_ROOT}/include" NO_DEFAULT_PATH)
 
 if(NOT ROCKSDB_LIBRARY)
@@ -107,13 +107,29 @@ target_compile_definitions(RocksDBViewer PRIVATE
     ROCKSDBVIEWER_VERSION="${PROJECT_VERSION}"
 )
 
-target_link_libraries(${EXECUTABLE_NAME} PRIVATE
-    Qt6::Core
-    Qt6::Gui
-    Qt6::Quick
-    Qt6::QuickControls2
-    ${ROCKSDB_LIBRARY}
-)
+if(WIN32)
+    target_link_libraries(${EXECUTABLE_NAME} PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Quick
+        Qt6::QuickControls2
+        ${ROCKSDB_LIBRARY}
+        shlwapi
+        rpcrt4
+    )
+else()
+    target_link_libraries(${EXECUTABLE_NAME} PRIVATE
+        Qt6::Core
+        Qt6::Gui
+        Qt6::Quick
+        Qt6::QuickControls2
+        ${ROCKSDB_LIBRARY}
+    )
+endif()
+
+if(NOT DEFINED CMAKE_INSTALL_BINDIR)
+    set(CMAKE_INSTALL_BINDIR "bin")
+endif()
 
 # Install executable
 install(TARGETS ${EXECUTABLE_NAME}
@@ -121,39 +137,41 @@ install(TARGETS ${EXECUTABLE_NAME}
     RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR}
 )
 
-# Configure and install .desktop file
-configure_file(
-    ${CMAKE_CURRENT_SOURCE_DIR}/RocksDBViewer.desktop.in
-    ${CMAKE_CURRENT_BINARY_DIR}/RocksDBViewer.desktop
-    @ONLY
-)
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RocksDBViewer.desktop
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
-)
+if(NOT WIN32)
+    # Configure and install .desktop file
+    configure_file(
+        ${CMAKE_CURRENT_SOURCE_DIR}/RocksDBViewer.desktop.in
+        ${CMAKE_CURRENT_BINARY_DIR}/RocksDBViewer.desktop
+        @ONLY
+    )
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/RocksDBViewer.desktop
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications
+    )
 
-# Install icon files to hicolor theme (multiple sizes)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@128.png
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/128x128/apps
-    RENAME RocksDBViewer.png
-)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@256.png
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps
-    RENAME RocksDBViewer.png
-)
-install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@512.png
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/512x512/apps
-    RENAME RocksDBViewer.png
-)
+    # Install icon files to hicolor theme (multiple sizes)
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@128.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/128x128/apps
+        RENAME RocksDBViewer.png
+    )
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@256.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/256x256/apps
+        RENAME RocksDBViewer.png
+    )
+    install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/assets/RocksDBViewer@512.png
+        DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/512x512/apps
+        RENAME RocksDBViewer.png
+    )
 
-# CPack RPM configuration
-set(CPACK_PACKAGE_NAME "RocksDBViewer")
-set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
-set(CPACK_PACKAGE_VENDOR "Presire")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Desktop GUI for browsing and editing RocksDB databases")
-set(CPACK_GENERATOR "RPM")
-set(CPACK_RPM_PACKAGE_LICENSE "MIT")
-set(CPACK_RPM_PACKAGE_GROUP "Development/Tools")
-set(CPACK_RPM_PACKAGE_REQUIRES "qt6-core >= 6.5, qt6-gui >= 6.5, qt6-quick >= 6.5, qt6-quickcontrols2 >= 6.5")
-set(CPACK_RPM_PACKAGE_URL "https://github.com/presire/RocksDBViewer")
-set(CPACK_RPM_PACKAGE_DESCRIPTION "A native desktop application for browsing and editing RocksDB databases, built with Qt6/QML and C++20.")
-include(CPack)
+    # CPack RPM configuration
+    set(CPACK_PACKAGE_NAME "RocksDBViewer")
+    set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
+    set(CPACK_PACKAGE_VENDOR "Presire")
+    set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Desktop GUI for browsing and editing RocksDB databases")
+    set(CPACK_GENERATOR "RPM")
+    set(CPACK_RPM_PACKAGE_LICENSE "MIT")
+    set(CPACK_RPM_PACKAGE_GROUP "Development/Tools")
+    set(CPACK_RPM_PACKAGE_REQUIRES "qt6-core >= 6.5, qt6-gui >= 6.5, qt6-quick >= 6.5, qt6-quickcontrols2 >= 6.5")
+    set(CPACK_RPM_PACKAGE_URL "https://github.com/presire/RocksDBViewer")
+    set(CPACK_RPM_PACKAGE_DESCRIPTION "A native desktop application for browsing and editing RocksDB databases, built with Qt6/QML and C++20.")
+    include(CPack)
+endif()
