@@ -45,6 +45,10 @@ Dialog {
         }
     }
 
+    function isSearchInput(text) {
+        return text.length > 0 && !/[\x00-\x1F\x7F]/.test(text);
+    }
+
     function syncSelectionToCurrentIndex() {
         var item = fsModel.get(fileList.currentIndex);
         if (item && item.filePath && (!dialogRoot.folderMode || item.isDirectory)) {
@@ -71,11 +75,22 @@ Dialog {
     }
 
     function handleEscape() {
+        if (pathField.activeFocus && pathField.text.length > 0) {
+            pathField.text = "";
+            return;
+        }
+
+        if (fileNameField.activeFocus && fileNameField.text.length > 0) {
+            fileNameField.text = "";
+            return;
+        }
+
         if (dialogRoot.searchBuffer.length > 0) {
             dialogRoot.searchBuffer = "";
-        } else {
-            dialogRoot.close();
+            return;
         }
+
+        dialogRoot.close();
     }
 
     Shortcut {
@@ -86,14 +101,12 @@ Dialog {
 
     Shortcut {
         sequence: "Esc"
-        enabled: fileList.activeFocus
+        enabled: dialogRoot.visible
+                 && !pathField.activeFocus
+                 && !fileNameField.activeFocus
+                 && !overwriteDialog.visible
+                 && !filterCombo.popup.visible
         onActivated: handleEscape()
-    }
-
-    Shortcut {
-        sequence: "Esc"
-        enabled: !fileList.activeFocus
-        onActivated: dialogRoot.close()
     }
 
     onOpened: {
@@ -207,6 +220,12 @@ Dialog {
                     fsModel.setPath(text);
                     dialogRoot.searchBuffer = "";
                 }
+                Keys.onPressed: function(event) {
+                    if (event.key === Qt.Key_Escape) {
+                        dialogRoot.handleEscape();
+                        event.accepted = true;
+                    }
+                }
             }
         }
 
@@ -235,6 +254,12 @@ Dialog {
                 color: theme.foreground
                 placeholderTextColor: theme.secondaryText
                 Material.theme: dialogRoot.materialTheme
+                Keys.onPressed: function(event) {
+                    if (event.key === Qt.Key_Escape) {
+                        dialogRoot.handleEscape();
+                        event.accepted = true;
+                    }
+                }
             }
         }
 
@@ -343,11 +368,7 @@ Dialog {
                         event.accepted = true;
                         break;
                     case Qt.Key_Escape:
-                        if (dialogRoot.searchBuffer.length > 0) {
-                            dialogRoot.searchBuffer = "";
-                        } else {
-                            dialogRoot.close();
-                        }
+                        dialogRoot.handleEscape();
                         event.accepted = true;
                         break;
                     case Qt.Key_Backspace:
@@ -361,7 +382,7 @@ Dialog {
                         event.accepted = true;
                         break;
                     default:
-                        if (event.text.length > 0 && event.modifiers === Qt.NoModifier) {
+                        if (event.modifiers === Qt.NoModifier && dialogRoot.isSearchInput(event.text)) {
                             dialogRoot.searchBuffer += event.text;
                             performSearch();
                             syncSelectionToCurrentIndex();

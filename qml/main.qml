@@ -44,19 +44,28 @@ ApplicationWindow {
     property int currentPage: 0
     property int pageSize: 1000
     property int totalEntries: 0
+    property var databaseStats: ({})
 
     // Data reload logic
     function reloadData() {
         if (!Backend.connected) return;
-        totalEntries = Backend.getTotalEntryCount();
         var searchText = controlBar.searchText || "";
+        totalEntries = Backend.getTotalEntryCount(searchText);
+        var maxPage = Math.max(0, Math.ceil(totalEntries / pageSize) - 1);
+        if (currentPage > maxPage) {
+            currentPage = maxPage;
+        }
         var data = Backend.getData(searchText, currentPage * pageSize, pageSize);
         entryModel.setEntries(data);
     }
 
+    function reloadStats() {
+        databaseStats = Backend.connected ? Backend.getDatabaseStats() : ({});
+    }
+
     function goToPage(page) {
         if (page < 0) page = 0;
-        var maxPage = Math.ceil(totalEntries / pageSize) - 1;
+        var maxPage = Math.max(0, Math.ceil(totalEntries / pageSize) - 1);
         if (page > maxPage) page = maxPage;
         currentPage = page;
         reloadData();
@@ -66,15 +75,21 @@ ApplicationWindow {
         target: Backend
         function onDataChanged() {
             reloadData();
+            reloadStats();
         }
         function onCurrentColumnFamilyChanged() {
+            root.currentPage = 0;
             reloadData();
+            reloadStats();
         }
         function onConnectedChanged() {
             if (Backend.connected) {
                 reloadData();
+                reloadStats();
             } else {
                 entryModel.clear();
+                totalEntries = 0;
+                databaseStats = ({});
             }
         }
         function onToastRequested(message, type) {
@@ -106,7 +121,12 @@ ApplicationWindow {
         StatsPanel {
             Layout.fillWidth: true
             theme: theme
+            stats: root.databaseStats
             visible: Backend.connected
+            onRefreshRequested: {
+                reloadStats();
+                toastManager.show(qsTr("Stats refreshed"), "info");
+            }
         }
 
         DatabasePanel {
@@ -131,7 +151,7 @@ ApplicationWindow {
                 proxyModel: proxyModel
                 autoRefreshRunning: autoRefreshTimer.running
                 currentPage: root.currentPage
-                totalPages: Math.ceil(root.totalEntries / root.pageSize)
+                totalPages: Math.max(1, Math.ceil(root.totalEntries / root.pageSize))
                 pageSizeValue: root.pageSize
                 onAddRequested: editDialog.openDialog()
                 onRefreshRequested: {

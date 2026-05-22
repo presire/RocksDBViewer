@@ -40,6 +40,10 @@ int main(int argc, char* argv[]) {
             }
         }
         // Re-open with all CFs
+        for (auto* h : handles) {
+            db->DestroyColumnFamilyHandle(h);
+        }
+        db->Close();
         db.reset();
         handles.clear();
         s = rocksdb::DB::Open(rocksdb::DBOptions(), db_path, descriptors, &handles, &db);
@@ -84,8 +88,9 @@ int main(int argc, char* argv[]) {
     db->Put(rocksdb::WriteOptions(), getHandle("logs"), "log_20240101_000002", R"({"timestamp":"2024-01-01T00:00:02","level":"DEBUG","message":"Database connection established"})");
 
     for (auto* h : handles) {
-        delete h;
+        db->DestroyColumnFamilyHandle(h);
     }
+    db->Close();
 
     std::cout << "Sample database created at: " << db_path << std::endl;
     return 0;

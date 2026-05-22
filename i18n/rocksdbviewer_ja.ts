@@ -243,47 +243,47 @@
 <context>
     <name>FilePickerDialog</name>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="23"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="24"/>
         <source>Select</source>
         <translation>選択</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="90"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="135"/>
         <source>Search: </source>
         <translation>検索: </translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="148"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="193"/>
         <source>Go to parent folder</source>
         <translation>親フォルダへ移動</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="189"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="234"/>
         <source>File name</source>
         <translation>ファイル名</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="198"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="243"/>
         <source>Show hidden files and folders</source>
         <translation>隠しファイルとフォルダを表示</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="393"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="459"/>
         <source>Cancel</source>
         <translation>キャンセル</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="403"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="429"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="457"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="490"/>
         <source>Confirm Overwrite</source>
         <translation>上書きの確認</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="465"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="498"/>
         <source>The file already exists. Overwrite?</source>
         <translation>ファイルが既に存在します。上書きしますか？</translation>
     </message>
@@ -327,129 +327,100 @@
 <context>
     <name>RocksDBBackend</name>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="174"/>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="201"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="217"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="255"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="384"/>
+        <source>Skipped entries containing non-UTF-8 keys or values</source>
+        <translation>非UTF-8のキーまたは値を含むエントリーをスキップしました</translation>
+    </message>
+    <message>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="220"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="258"/>
         <source>Loaded %1 entries (limit reached)</source>
         <translation>%1件を読み込みました（上限に達しました）</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="236"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="277"/>
+        <source>Skipped entry containing non-UTF-8 value</source>
+        <translation>非UTF-8の値を含むエントリーをスキップしました</translation>
+    </message>
+    <message>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="299"/>
         <source>Data saved</source>
         <translation>データを保存しました</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="253"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="316"/>
         <source>Data deleted</source>
         <translation>データを削除しました</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="271"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="348"/>
         <source>All data deleted</source>
         <translation>全データを削除しました</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="322"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="421"/>
         <source>%1 records imported</source>
         <translation>%1件をインポートしました</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="381"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="496"/>
         <source>Copied to clipboard</source>
         <translation>クリップボードにコピーしました</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="416"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="531"/>
         <source>Failed to open file for writing</source>
         <translation>ファイルの書き込みに失敗しました</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="421"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="536"/>
         <source>Data exported</source>
         <translation>データをエクスポートしました</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="429"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="544"/>
         <source>Failed to open file for reading</source>
         <translation>ファイルの読み込みに失敗しました</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="436"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="551"/>
         <source>Invalid JSON file</source>
         <translation>無効なJSONファイルです</translation>
     </message>
 </context>
 <context>
-    <name>SkeletonMenu</name>
-    <message>
-        <source>Empty Object</source>
-        <translation type="vanished">空のオブジェクト</translation>
-    </message>
-    <message>
-        <source>Empty Array</source>
-        <translation type="vanished">空の配列</translation>
-    </message>
-    <message>
-        <source>Simple Object</source>
-        <translation type="vanished">シンプルオブジェクト</translation>
-    </message>
-    <message>
-        <source>Nested Object</source>
-        <translation type="vanished">ネストしたオブジェクト</translation>
-    </message>
-    <message>
-        <source>Array of Objects</source>
-        <translation type="vanished">オブジェクトの配列</translation>
-    </message>
-    <message>
-        <source>User Profile</source>
-        <translation type="vanished">ユーザープロフィール</translation>
-    </message>
-    <message>
-        <source>Config</source>
-        <translation type="vanished">設定</translation>
-    </message>
-</context>
-<context>
     <name>StatsPanel</name>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="23"/>
+        <location filename="../qml/components/StatsPanel.qml" line="25"/>
         <source>Entries: %1</source>
         <translation>エントリー数: %1</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="29"/>
+        <location filename="../qml/components/StatsPanel.qml" line="31"/>
         <source>Column Families: %1</source>
         <translation>カラムファミリー数: %1</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="35"/>
-        <source>Disk: -</source>
-        <translation>ディスク: -</translation>
-    </message>
-    <message>
-        <location filename="../qml/components/StatsPanel.qml" line="37"/>
+        <location filename="../qml/components/StatsPanel.qml" line="38"/>
         <source>Disk: %1 B</source>
         <translation>ディスク: %1 B</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="38"/>
+        <location filename="../qml/components/StatsPanel.qml" line="39"/>
         <source>Disk: %1 KB</source>
         <translation>ディスク: %1 KB</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="39"/>
+        <location filename="../qml/components/StatsPanel.qml" line="40"/>
         <source>Disk: %1 MB</source>
         <translation>ディスク: %1 MB</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="47"/>
+        <location filename="../qml/components/StatsPanel.qml" line="48"/>
         <source>Refresh Stats</source>
         <translation>統計を更新</translation>
-    </message>
-    <message>
-        <location filename="../qml/components/StatsPanel.qml" line="54"/>
-        <source>Stats refreshed</source>
-        <translation>統計を更新しました</translation>
     </message>
 </context>
 <context>
@@ -468,157 +439,50 @@
         <translation>RocksDB Viewer</translation>
     </message>
     <message>
-        <source>Connected</source>
-        <translation type="vanished">接続済み</translation>
-    </message>
-    <message>
-        <source>Not Connected</source>
-        <translation type="vanished">未接続</translation>
-    </message>
-    <message>
-        <source>Database Path</source>
-        <translation type="vanished">データベースパス</translation>
-    </message>
-    <message>
-        <source>No database selected</source>
-        <translation type="vanished">データベースが選択されていません</translation>
-    </message>
-    <message>
-        <source>Open Database</source>
-        <translation type="vanished">データベースを開く</translation>
-    </message>
-    <message>
-        <source>Search by key or value...</source>
-        <translation type="vanished">キーまたはバリューで検索...</translation>
-    </message>
-    <message>
-        <source> entries</source>
-        <translation type="vanished"> 件</translation>
-    </message>
-    <message>
-        <source>Add New</source>
-        <translation type="vanished">新規追加</translation>
-    </message>
-    <message>
-        <source>Refresh</source>
-        <translation type="vanished">更新</translation>
-    </message>
-    <message>
-        <location filename="../qml/main.qml" line="139"/>
-        <location filename="../qml/main.qml" line="270"/>
+        <location filename="../qml/main.qml" line="155"/>
+        <location filename="../qml/main.qml" line="286"/>
         <source>Data refreshed</source>
         <translation>データを更新しました</translation>
     </message>
     <message>
-        <source>Auto-Refresh ON</source>
-        <translation type="vanished">自動更新ON</translation>
-    </message>
-    <message>
-        <source>Auto-Refresh OFF</source>
-        <translation type="vanished">自動更新OFF</translation>
-    </message>
-    <message>
-        <location filename="../qml/main.qml" line="143"/>
+        <location filename="../qml/main.qml" line="159"/>
         <source>Auto-refresh started</source>
         <translation>自動更新を開始しました</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="143"/>
+        <location filename="../qml/main.qml" line="159"/>
         <source>Auto-refresh stopped</source>
         <translation>自動更新を停止しました</translation>
     </message>
     <message>
-        <source>Sort</source>
-        <translation type="vanished">ソート</translation>
+        <location filename="../qml/main.qml" line="124"/>
+        <source>Stats refreshed</source>
+        <translation>統計を更新しました</translation>
     </message>
     <message>
-        <source>Export</source>
-        <translation type="vanished">エクスポート</translation>
-    </message>
-    <message>
-        <source>Import</source>
-        <translation type="vanished">インポート</translation>
-    </message>
-    <message>
-        <source>Clear All</source>
-        <translation type="vanished">全削除</translation>
-    </message>
-    <message>
-        <source>Key</source>
-        <translation type="vanished">キー</translation>
-    </message>
-    <message>
-        <source>Value</source>
-        <translation type="vanished">バリュー</translation>
-    </message>
-    <message>
-        <source>Actions</source>
-        <translation type="vanished">操作</translation>
-    </message>
-    <message>
-        <source>Click &quot;Open Database&quot; to select a RocksDB directory.</source>
-        <translation type="vanished">「データベースを開く」ボタンから RocksDB ディレクトリを選択してください。</translation>
-    </message>
-    <message>
-        <location filename="../qml/main.qml" line="188"/>
+        <location filename="../qml/main.qml" line="204"/>
         <source>Select RocksDB Directory</source>
         <translation>RocksDBディレクトリを選択</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="197"/>
+        <location filename="../qml/main.qml" line="213"/>
         <source>Import JSON</source>
         <translation>JSONをインポート</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="212"/>
+        <location filename="../qml/main.qml" line="228"/>
         <source>Export JSON</source>
         <translation>JSONをエクスポート</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="225"/>
+        <location filename="../qml/main.qml" line="241"/>
         <source>Confirm Clear All</source>
         <translation>全削除の確認</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="233"/>
+        <location filename="../qml/main.qml" line="249"/>
         <source>Are you sure you want to delete all data in column family &apos;%1&apos;?</source>
         <translation>カラムファミリー&apos;%1&apos;の全データを削除してもよろしいですか？</translation>
-    </message>
-    <message>
-        <source>Edit Entry</source>
-        <translation type="vanished">エントリーを編集</translation>
-    </message>
-    <message>
-        <source>Add Entry</source>
-        <translation type="vanished">エントリーを追加</translation>
-    </message>
-    <message>
-        <source>e.g., user:123</source>
-        <translation type="vanished">例: user:123</translation>
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="vanished">フォーマット</translation>
-    </message>
-    <message>
-        <source>Minify</source>
-        <translation type="vanished">圧縮</translation>
-    </message>
-    <message>
-        <source>e.g., {&quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 30}</source>
-        <translation type="vanished">例: {&quot;name&quot;: &quot;太郎&quot;, &quot;age&quot;: 30}</translation>
-    </message>
-    <message>
-        <source>Save</source>
-        <translation type="vanished">保存</translation>
-    </message>
-    <message>
-        <source>Please enter a key</source>
-        <translation type="vanished">キーを入力してください</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="vanished">キャンセル</translation>
     </message>
 </context>
 </TS>

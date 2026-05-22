@@ -7,6 +7,7 @@
 #include <QWindow>
 #include <QFile>
 #include <QLocale>
+#include <memory>
 #include "backend/RocksDBBackend.h"
 #include "backend/EntryModel.h"
 #include "backend/FilterProxyModel.h"
@@ -38,7 +39,10 @@ int main(int argc, char *argv[])
     // Materialスタイルの設定
     qputenv("QT_QUICK_CONTROLS_STYLE", "Material");
 
+    std::unique_ptr<RocksDBBackend> backend = std::make_unique<RocksDBBackend>();
+    std::unique_ptr<I18nManager> i18n;
     QQmlApplicationEngine engine;
+    i18n = std::make_unique<I18nManager>(&engine);
 
     // 型の登録
     qmlRegisterType<EntryModel>("RocksDBViewerApp", 1, 0, "EntryModel");
@@ -50,11 +54,8 @@ int main(int argc, char *argv[])
         });
 
     // シングルトンの登録 (QMLから常にアクセス可能にする)
-    RocksDBBackend backend;
-    I18nManager i18n(&engine);
-
-    qmlRegisterSingletonInstance("RocksDBViewerApp", 1, 0, "Backend", &backend);
-    qmlRegisterSingletonInstance("RocksDBViewerApp", 1, 0, "I18n", &i18n);
+    qmlRegisterSingletonInstance("RocksDBViewerApp", 1, 0, "Backend", backend.get());
+    qmlRegisterSingletonInstance("RocksDBViewerApp", 1, 0, "I18n", i18n.get());
 
     // 言語設定の永続化と自動検出
     auto settings = SettingsMigration::newSettings();
@@ -70,12 +71,15 @@ int main(int argc, char *argv[])
         }
     }
     // 言語変更時に保存
-    QObject::connect(&i18n, &I18nManager::currentLanguageChanged, [&i18n]() {
+    QObject::connect(i18n.get(), &I18nManager::currentLanguageChanged, [i18n = i18n.get()]() {
         auto s = SettingsMigration::newSettings();
-        s.setValue(SettingsKeys::language, i18n.currentLanguage());
+        s.setValue(SettingsKeys::language, i18n->currentLanguage());
     });
 
-    i18n.setCurrentLanguage(savedLang);
+    i18n->setCurrentLanguage(savedLang);
+    if (settings.value(SettingsKeys::language, QString()).toString().isEmpty()) {
+        settings.setValue(SettingsKeys::language, savedLang);
+    }
 
     // ダークモード設定の読み込みとQMLへの公開
     bool initialDarkMode = settings.value(SettingsKeys::darkMode, false).toBool();
@@ -96,7 +100,7 @@ int main(int argc, char *argv[])
     if (args.size() > 1) {
         QString dbPath = args.at(1);
         if (QFile::exists(dbPath)) {
-            backend.openDatabase(dbPath);
+            backend->openDatabase(dbPath);
         }
     }
 

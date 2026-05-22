@@ -2,6 +2,8 @@
 #include "utils/SettingsMigration.h"
 #include "utils/SettingsKeys.h"
 #include <rocksdb/db.h>
+#include <rocksdb/iterator.h>
+#include <rocksdb/write_batch.h>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QFile>
@@ -12,6 +14,27 @@
 #include <QSettings>
 #include <QDirIterator>
 #include <QFileInfo>
+#include <QStringDecoder>
+#include <optional>
+
+namespace {
+std::optional<QString> utf8StringFromSlice(const rocksdb::Slice &slice)
+{
+    QByteArray bytes(slice.data(), static_cast<qsizetype>(slice.size()));
+    QStringDecoder decoder(QStringDecoder::Utf8);
+    QString text = decoder.decode(bytes);
+    if (decoder.hasError()) {
+        return std::nullopt;
+    }
+    return text;
+}
+
+std::string utf8BytesFromString(const QString &text)
+{
+    QByteArray bytes = text.toUtf8();
+    return std::string(bytes.constData(), static_cast<size_t>(bytes.size()));
+}
+}
 
 struct RocksDBBackend::Impl {
     std::unique_ptr<rocksdb::DB> db;
@@ -73,7 +96,7 @@ bool RocksDBBackend::openDatabase(const QString &path)
     closeDatabase();
 
     std::vector<std::string> cfs;
-    rocksdb::Status s = rocksdb::DB::ListColumnFamilies(rocksdb::Options(), path.toStdString(), &cfs);
+    rocksdb::Status s = rocksdb::DB::ListColumnFamilies(rocksdb::Options(), utf8BytesFromString(path), &cfs);
     if (!s.ok()) {
         cfs = {"default"};
     }
@@ -85,8 +108,13 @@ bool RocksDBBackend::openDatabase(const QString &path)
 
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
     std::unique_ptr<rocksdb::DB> db;
-    s = rocksdb::DB::Open(rocksdb::DBOptions(), path.toStdString(), descriptors, &handles, &db);
+    s = rocksdb::DB::Open(rocksdb::DBOptions(), utf8BytesFromString(path), descriptors, &handles, &db);
     if (!s.ok()) {
+        if (db) {
+            for (auto* h : handles) {
+                db->DestroyColumnFamilyHandle(h);
+            }
+        }
         emit errorOccurred(QString::fromStdString(s.ToString()));
         return false;
     }
@@ -117,9 +145,16 @@ void RocksDBBackend::closeDatabase()
     if (!d->db) return;
 
     for (auto* h : d->handles) {
-        delete h;
+        rocksdb::Status s = d->db->DestroyColumnFamilyHandle(h);
+        if (!s.ok()) {
+            emit errorOccurred(QString::fromStdString(s.ToString()));
+        }
     }
     d->handles.clear();
+    rocksdb::Status closeStatus = d->db->Close();
+    if (!closeStatus.ok()) {
+        emit errorOccurred(QString::fromStdString(closeStatus.ToString()));
+    }
     d->db.reset();
     d->dbPath.clear();
     d->cfNames.clear();
@@ -135,7 +170,7 @@ rocksdb::ColumnFamilyHandle* RocksDBBackend::getColumnFamilyHandle(const QString
 {
     if (!d->db) return nullptr;
     for (size_t i = 0; i < d->handles.size(); ++i) {
-        if (d->handles[i]->GetName() == name.toStdString()) {
+        if (d->handles[i]->GetName() == utf8BytesFromString(name)) {
             return d->handles[i];
         }
     }
@@ -151,25 +186,36 @@ QJsonObject RocksDBBackend::getData(const QString &search, int offset, int limit
     if (!cf) return result;
 
     rocksdb::ReadOptions ro;
-    auto* it = d->db->NewIterator(ro, cf);
+    std::unique_ptr<rocksdb::Iterator> it(d->db->NewIterator(ro, cf));
     QString term = search.toLower();
     int count = 0;
     int matched = 0;
     const int maxEntries = 10000;
     int effectiveLimit = (limit > 0 && limit < maxEntries) ? limit : maxEntries;
+    bool skippedBinary = false;
 
     for (it->SeekToFirst(); it->Valid() && count < effectiveLimit; it->Next()) {
-        QString key = QString::fromStdString(it->key().ToString());
-        QString value = QString::fromStdString(it->value().ToString());
-        if (term.isEmpty() || key.toLower().contains(term) || value.toLower().contains(term)) {
+        auto key = utf8StringFromSlice(it->key());
+        auto value = utf8StringFromSlice(it->value());
+        if (!key || !value) {
+            skippedBinary = true;
+            continue;
+        }
+        if (term.isEmpty() || key->toLower().contains(term) || value->toLower().contains(term)) {
             if (matched >= offset) {
-                result[key] = value;
+                result[*key] = *value;
                 count++;
             }
             matched++;
         }
     }
-    delete it;
+    if (!it->status().ok()) {
+        emit errorOccurred(QString::fromStdString(it->status().ToString()));
+        return result;
+    }
+    if (skippedBinary) {
+        emit toastRequested(tr("Skipped entries containing non-UTF-8 keys or values"), "warning");
+    }
     if (count >= effectiveLimit) {
         emit toastRequested(tr("Loaded %1 entries (limit reached)").arg(effectiveLimit), "warning");
     }
@@ -187,16 +233,27 @@ QJsonObject RocksDBBackend::getDataByPrefix(const QString &prefix, int limit)
     rocksdb::ReadOptions ro;
     ro.prefix_same_as_start = true;
 
-    auto* it = d->db->NewIterator(ro, cf);
+    std::unique_ptr<rocksdb::Iterator> it(d->db->NewIterator(ro, cf));
     int count = 0;
-    for (it->Seek(prefix.toStdString()); it->Valid() && count < limit; it->Next()) {
-        QString key = QString::fromStdString(it->key().ToString());
-        if (!key.startsWith(prefix)) break;
-        QString value = QString::fromStdString(it->value().ToString());
-        result[key] = value;
+    bool skippedBinary = false;
+    for (it->Seek(utf8BytesFromString(prefix)); it->Valid() && count < limit; it->Next()) {
+        auto key = utf8StringFromSlice(it->key());
+        auto value = utf8StringFromSlice(it->value());
+        if (!key || !value) {
+            skippedBinary = true;
+            continue;
+        }
+        if (!key->startsWith(prefix)) break;
+        result[*key] = *value;
         count++;
     }
-    delete it;
+    if (!it->status().ok()) {
+        emit errorOccurred(QString::fromStdString(it->status().ToString()));
+        return result;
+    }
+    if (skippedBinary) {
+        emit toastRequested(tr("Skipped entries containing non-UTF-8 keys or values"), "warning");
+    }
     if (count >= limit) {
         emit toastRequested(tr("Loaded %1 entries (limit reached)").arg(limit), "warning");
     }
@@ -212,10 +269,16 @@ QJsonObject RocksDBBackend::getDataByKey(const QString &key)
     if (!cf) return result;
 
     std::string value;
-    rocksdb::Status s = d->db->Get(rocksdb::ReadOptions(), cf, key.toStdString(), &value);
+    rocksdb::Status s = d->db->Get(rocksdb::ReadOptions(), cf, utf8BytesFromString(key), &value);
     if (s.ok()) {
+        rocksdb::Slice valueSlice(value);
+        auto textValue = utf8StringFromSlice(valueSlice);
+        if (!textValue) {
+            emit toastRequested(tr("Skipped entry containing non-UTF-8 value"), "warning");
+            return result;
+        }
         result["key"] = key;
-        result["value"] = QString::fromStdString(value);
+        result["value"] = *textValue;
     }
     return result;
 }
@@ -227,7 +290,7 @@ bool RocksDBBackend::setData(const QString &key, const QString &value)
     auto* cf = getColumnFamilyHandle(d->currentCf);
     if (!cf) return false;
 
-    rocksdb::Status s = d->db->Put(rocksdb::WriteOptions(), cf, key.toStdString(), value.toStdString());
+    rocksdb::Status s = d->db->Put(rocksdb::WriteOptions(), cf, utf8BytesFromString(key), utf8BytesFromString(value));
     if (!s.ok()) {
         emit errorOccurred(QString::fromStdString(s.ToString()));
         return false;
@@ -244,7 +307,7 @@ bool RocksDBBackend::deleteData(const QString &key)
     auto* cf = getColumnFamilyHandle(d->currentCf);
     if (!cf) return false;
 
-    rocksdb::Status s = d->db->Delete(rocksdb::WriteOptions(), cf, key.toStdString());
+    rocksdb::Status s = d->db->Delete(rocksdb::WriteOptions(), cf, utf8BytesFromString(key));
     if (!s.ok()) {
         emit errorOccurred(QString::fromStdString(s.ToString()));
         return false;
@@ -262,11 +325,25 @@ bool RocksDBBackend::clearData()
     if (!cf) return false;
 
     rocksdb::ReadOptions ro;
-    auto* it = d->db->NewIterator(ro, cf);
+    rocksdb::WriteBatch batch;
+    std::unique_ptr<rocksdb::Iterator> it(d->db->NewIterator(ro, cf));
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
-        d->db->Delete(rocksdb::WriteOptions(), cf, it->key());
+        rocksdb::Status s = batch.Delete(cf, it->key());
+        if (!s.ok()) {
+            emit errorOccurred(QString::fromStdString(s.ToString()));
+            return false;
+        }
     }
-    delete it;
+    if (!it->status().ok()) {
+        emit errorOccurred(QString::fromStdString(it->status().ToString()));
+        return false;
+    }
+
+    rocksdb::Status s = d->db->Write(rocksdb::WriteOptions(), &batch);
+    if (!s.ok()) {
+        emit errorOccurred(QString::fromStdString(s.ToString()));
+        return false;
+    }
     emit dataChanged();
     emit toastRequested(tr("All data deleted"), "success");
     return true;
@@ -281,20 +358,31 @@ QJsonObject RocksDBBackend::exportData()
     if (!cf) return result;
 
     rocksdb::ReadOptions ro;
-    auto* it = d->db->NewIterator(ro, cf);
+    std::unique_ptr<rocksdb::Iterator> it(d->db->NewIterator(ro, cf));
+    bool skippedBinary = false;
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
-        QString key = QString::fromStdString(it->key().ToString());
-        QString raw = QString::fromStdString(it->value().ToString());
-        QJsonDocument doc = QJsonDocument::fromJson(raw.toUtf8());
+        auto key = utf8StringFromSlice(it->key());
+        auto raw = utf8StringFromSlice(it->value());
+        if (!key || !raw) {
+            skippedBinary = true;
+            continue;
+        }
+        QJsonDocument doc = QJsonDocument::fromJson(raw->toUtf8());
         if (doc.isObject()) {
-            result[key] = doc.object();
+            result[*key] = doc.object();
         } else if (doc.isArray()) {
-            result[key] = doc.array();
+            result[*key] = doc.array();
         } else {
-            result[key] = raw;
+            result[*key] = *raw;
         }
     }
-    delete it;
+    if (!it->status().ok()) {
+        emit errorOccurred(QString::fromStdString(it->status().ToString()));
+        return result;
+    }
+    if (skippedBinary) {
+        emit toastRequested(tr("Skipped entries containing non-UTF-8 keys or values"), "warning");
+    }
     return result;
 }
 
@@ -305,6 +393,7 @@ bool RocksDBBackend::importData(const QJsonObject &data)
     auto* cf = getColumnFamilyHandle(d->currentCf);
     if (!cf) return false;
 
+    rocksdb::WriteBatch batch;
     int count = 0;
     for (auto it = data.begin(); it != data.end(); ++it) {
         QString valueStr;
@@ -315,15 +404,25 @@ bool RocksDBBackend::importData(const QJsonObject &data)
         } else {
             valueStr = it.value().toVariant().toString();
         }
-        d->db->Put(rocksdb::WriteOptions(), cf, it.key().toStdString(), valueStr.toStdString());
+        rocksdb::Status s = batch.Put(cf, utf8BytesFromString(it.key()), utf8BytesFromString(valueStr));
+        if (!s.ok()) {
+            emit errorOccurred(QString::fromStdString(s.ToString()));
+            return false;
+        }
         count++;
+    }
+
+    rocksdb::Status s = d->db->Write(rocksdb::WriteOptions(), &batch);
+    if (!s.ok()) {
+        emit errorOccurred(QString::fromStdString(s.ToString()));
+        return false;
     }
     emit dataChanged();
     emit toastRequested(tr("%1 records imported").arg(count), "success");
     return true;
 }
 
-int RocksDBBackend::getTotalEntryCount()
+int RocksDBBackend::getTotalEntryCount(const QString &search)
 {
     if (!d->db) return 0;
 
@@ -331,10 +430,24 @@ int RocksDBBackend::getTotalEntryCount()
     if (!cf) return 0;
 
     rocksdb::ReadOptions ro;
-    auto* it = d->db->NewIterator(ro, cf);
+    std::unique_ptr<rocksdb::Iterator> it(d->db->NewIterator(ro, cf));
+    const QString term = search.toLower();
+    constexpr int maxEntries = 10000;
     int count = 0;
-    for (it->SeekToFirst(); it->Valid(); it->Next()) count++;
-    delete it;
+    for (it->SeekToFirst(); it->Valid() && count < maxEntries; it->Next()) {
+        auto key = utf8StringFromSlice(it->key());
+        auto value = utf8StringFromSlice(it->value());
+        if (!key || !value) {
+            continue;
+        }
+        if (term.isEmpty() || key->toLower().contains(term) || value->toLower().contains(term)) {
+            count++;
+        }
+    }
+    if (!it->status().ok()) {
+        emit errorOccurred(QString::fromStdString(it->status().ToString()));
+        return count;
+    }
     return count;
 }
 
@@ -348,10 +461,13 @@ QJsonObject RocksDBBackend::getDatabaseStats()
         auto* cf = getColumnFamilyHandle(cfName);
         if (!cf) continue;
         rocksdb::ReadOptions ro;
-        auto* it = d->db->NewIterator(ro, cf);
+        std::unique_ptr<rocksdb::Iterator> it(d->db->NewIterator(ro, cf));
         int cfCount = 0;
         for (it->SeekToFirst(); it->Valid(); it->Next()) cfCount++;
-        delete it;
+        if (!it->status().ok()) {
+            emit errorOccurred(QString::fromStdString(it->status().ToString()));
+            continue;
+        }
         stats[cfName + "_count"] = cfCount;
         totalCount += cfCount;
     }

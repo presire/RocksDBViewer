@@ -109,22 +109,22 @@
     <message>
         <location filename="../qml/components/DataTable.qml" line="127"/>
         <source>Copy key</source>
-        <translation></translation>
+        <translation>Copy key</translation>
     </message>
     <message>
         <location filename="../qml/components/DataTable.qml" line="125"/>
         <source>Copied!</source>
-        <translation></translation>
+        <translation>Copied!</translation>
     </message>
     <message>
         <location filename="../qml/components/DataTable.qml" line="150"/>
         <source>Edit</source>
-        <translation></translation>
+        <translation>Edit</translation>
     </message>
     <message>
         <location filename="../qml/components/DataTable.qml" line="174"/>
         <source>Delete</source>
-        <translation></translation>
+        <translation>Delete</translation>
     </message>
 </context>
 <context>
@@ -243,47 +243,47 @@
 <context>
     <name>FilePickerDialog</name>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="23"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="24"/>
         <source>Select</source>
         <translation>Select</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="90"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="135"/>
         <source>Search: </source>
         <translation>Search: </translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="148"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="193"/>
         <source>Go to parent folder</source>
         <translation>Go to parent folder</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="189"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="234"/>
         <source>File name</source>
         <translation>File name</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="198"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="243"/>
         <source>Show hidden files and folders</source>
         <translation>Show hidden files and folders</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="393"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="459"/>
         <source>Cancel</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="403"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="429"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="457"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="490"/>
         <source>Confirm Overwrite</source>
         <translation>Confirm Overwrite</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="465"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="498"/>
         <source>The file already exists. Overwrite?</source>
         <translation>The file already exists. Overwrite?</translation>
     </message>
@@ -327,129 +327,100 @@
 <context>
     <name>RocksDBBackend</name>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="174"/>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="201"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="217"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="255"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="384"/>
+        <source>Skipped entries containing non-UTF-8 keys or values</source>
+        <translation>Skipped entries containing non-UTF-8 keys or values</translation>
+    </message>
+    <message>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="220"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="258"/>
         <source>Loaded %1 entries (limit reached)</source>
         <translation>Loaded %1 entries (limit reached)</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="236"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="277"/>
+        <source>Skipped entry containing non-UTF-8 value</source>
+        <translation>Skipped entry containing non-UTF-8 value</translation>
+    </message>
+    <message>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="299"/>
         <source>Data saved</source>
         <translation>Data saved</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="253"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="316"/>
         <source>Data deleted</source>
         <translation>Data deleted</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="271"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="348"/>
         <source>All data deleted</source>
         <translation>All data deleted</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="322"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="421"/>
         <source>%1 records imported</source>
         <translation>%1 records imported</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="381"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="496"/>
         <source>Copied to clipboard</source>
         <translation>Copied to clipboard</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="416"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="531"/>
         <source>Failed to open file for writing</source>
         <translation>Failed to open file for writing</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="421"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="536"/>
         <source>Data exported</source>
         <translation>Data exported</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="429"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="544"/>
         <source>Failed to open file for reading</source>
         <translation>Failed to open file for reading</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="436"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="551"/>
         <source>Invalid JSON file</source>
         <translation>Invalid JSON file</translation>
     </message>
 </context>
 <context>
-    <name>SkeletonMenu</name>
-    <message>
-        <source>Empty Object</source>
-        <translation type="vanished">Empty Object</translation>
-    </message>
-    <message>
-        <source>Empty Array</source>
-        <translation type="vanished">Empty Array</translation>
-    </message>
-    <message>
-        <source>Simple Object</source>
-        <translation type="vanished">Simple Object</translation>
-    </message>
-    <message>
-        <source>Nested Object</source>
-        <translation type="vanished">Nested Object</translation>
-    </message>
-    <message>
-        <source>Array of Objects</source>
-        <translation type="vanished">Array of Objects</translation>
-    </message>
-    <message>
-        <source>User Profile</source>
-        <translation type="vanished">User Profile</translation>
-    </message>
-    <message>
-        <source>Config</source>
-        <translation type="vanished">Config</translation>
-    </message>
-</context>
-<context>
     <name>StatsPanel</name>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="23"/>
+        <location filename="../qml/components/StatsPanel.qml" line="25"/>
         <source>Entries: %1</source>
         <translation>Entries: %1</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="29"/>
+        <location filename="../qml/components/StatsPanel.qml" line="31"/>
         <source>Column Families: %1</source>
         <translation>Column Families: %1</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="35"/>
-        <source>Disk: -</source>
-        <translation>Disk: -</translation>
-    </message>
-    <message>
-        <location filename="../qml/components/StatsPanel.qml" line="37"/>
+        <location filename="../qml/components/StatsPanel.qml" line="38"/>
         <source>Disk: %1 B</source>
         <translation>Disk: %1 B</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="38"/>
+        <location filename="../qml/components/StatsPanel.qml" line="39"/>
         <source>Disk: %1 KB</source>
         <translation>Disk: %1 KB</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="39"/>
+        <location filename="../qml/components/StatsPanel.qml" line="40"/>
         <source>Disk: %1 MB</source>
         <translation>Disk: %1 MB</translation>
     </message>
     <message>
-        <location filename="../qml/components/StatsPanel.qml" line="47"/>
+        <location filename="../qml/components/StatsPanel.qml" line="48"/>
         <source>Refresh Stats</source>
         <translation>Refresh Stats</translation>
-    </message>
-    <message>
-        <location filename="../qml/components/StatsPanel.qml" line="54"/>
-        <source>Stats refreshed</source>
-        <translation>Stats refreshed</translation>
     </message>
 </context>
 <context>
@@ -468,157 +439,50 @@
         <translation>RocksDB Viewer</translation>
     </message>
     <message>
-        <source>Connected</source>
-        <translation type="vanished">Connected</translation>
-    </message>
-    <message>
-        <source>Not Connected</source>
-        <translation type="vanished">Not Connected</translation>
-    </message>
-    <message>
-        <source>Database Path</source>
-        <translation type="vanished">Database Path</translation>
-    </message>
-    <message>
-        <source>No database selected</source>
-        <translation type="vanished">No database selected</translation>
-    </message>
-    <message>
-        <source>Open Database</source>
-        <translation type="vanished">Open Database</translation>
-    </message>
-    <message>
-        <source>Search by key or value...</source>
-        <translation type="vanished">Search by key or value...</translation>
-    </message>
-    <message>
-        <source> entries</source>
-        <translation type="vanished"> entries</translation>
-    </message>
-    <message>
-        <source>Add New</source>
-        <translation type="vanished">Add New</translation>
-    </message>
-    <message>
-        <source>Refresh</source>
-        <translation type="vanished">Refresh</translation>
-    </message>
-    <message>
-        <location filename="../qml/main.qml" line="139"/>
-        <location filename="../qml/main.qml" line="270"/>
+        <location filename="../qml/main.qml" line="155"/>
+        <location filename="../qml/main.qml" line="286"/>
         <source>Data refreshed</source>
         <translation>Data refreshed</translation>
     </message>
     <message>
-        <source>Auto-Refresh ON</source>
-        <translation type="vanished">Auto-Refresh ON</translation>
-    </message>
-    <message>
-        <source>Auto-Refresh OFF</source>
-        <translation type="vanished">Auto-Refresh OFF</translation>
-    </message>
-    <message>
-        <location filename="../qml/main.qml" line="143"/>
+        <location filename="../qml/main.qml" line="159"/>
         <source>Auto-refresh started</source>
         <translation>Auto-refresh started</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="143"/>
+        <location filename="../qml/main.qml" line="159"/>
         <source>Auto-refresh stopped</source>
         <translation>Auto-refresh stopped</translation>
     </message>
     <message>
-        <source>Sort</source>
-        <translation type="vanished">Sort</translation>
+        <location filename="../qml/main.qml" line="124"/>
+        <source>Stats refreshed</source>
+        <translation>Stats refreshed</translation>
     </message>
     <message>
-        <source>Export</source>
-        <translation type="vanished">Export</translation>
-    </message>
-    <message>
-        <source>Import</source>
-        <translation type="vanished">Import</translation>
-    </message>
-    <message>
-        <source>Clear All</source>
-        <translation type="vanished">Clear All</translation>
-    </message>
-    <message>
-        <source>Key</source>
-        <translation type="vanished">Key</translation>
-    </message>
-    <message>
-        <source>Value</source>
-        <translation type="vanished">Value</translation>
-    </message>
-    <message>
-        <source>Actions</source>
-        <translation type="vanished">Actions</translation>
-    </message>
-    <message>
-        <source>Click &quot;Open Database&quot; to select a RocksDB directory.</source>
-        <translation type="vanished">Click &quot;Open Database&quot; to select a RocksDB directory.</translation>
-    </message>
-    <message>
-        <location filename="../qml/main.qml" line="188"/>
+        <location filename="../qml/main.qml" line="204"/>
         <source>Select RocksDB Directory</source>
         <translation>Select RocksDB Directory</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="197"/>
+        <location filename="../qml/main.qml" line="213"/>
         <source>Import JSON</source>
         <translation>Import JSON</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="212"/>
+        <location filename="../qml/main.qml" line="228"/>
         <source>Export JSON</source>
         <translation>Export JSON</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="225"/>
+        <location filename="../qml/main.qml" line="241"/>
         <source>Confirm Clear All</source>
         <translation>Confirm Clear All</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="233"/>
+        <location filename="../qml/main.qml" line="249"/>
         <source>Are you sure you want to delete all data in column family &apos;%1&apos;?</source>
         <translation>Are you sure you want to delete all data in column family &apos;%1&apos;?</translation>
-    </message>
-    <message>
-        <source>Edit Entry</source>
-        <translation type="vanished">Edit Entry</translation>
-    </message>
-    <message>
-        <source>Add Entry</source>
-        <translation type="vanished">Add Entry</translation>
-    </message>
-    <message>
-        <source>e.g., user:123</source>
-        <translation type="vanished">e.g., user:123</translation>
-    </message>
-    <message>
-        <source>Format</source>
-        <translation type="vanished">Format</translation>
-    </message>
-    <message>
-        <source>Minify</source>
-        <translation type="vanished">Minify</translation>
-    </message>
-    <message>
-        <source>e.g., {&quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 30}</source>
-        <translation type="vanished">e.g., {&quot;name&quot;: &quot;John&quot;, &quot;age&quot;: 30}</translation>
-    </message>
-    <message>
-        <source>Save</source>
-        <translation type="vanished">Save</translation>
-    </message>
-    <message>
-        <source>Please enter a key</source>
-        <translation type="vanished">Please enter a key</translation>
-    </message>
-    <message>
-        <source>Cancel</source>
-        <translation type="vanished">Cancel</translation>
     </message>
 </context>
 </TS>

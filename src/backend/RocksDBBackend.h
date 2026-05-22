@@ -38,7 +38,7 @@ public:
     Q_INVOKABLE QJsonObject getDataByPrefix(const QString &prefix, int limit = 10000);
     Q_INVOKABLE QJsonObject getDataByKey(const QString &key);
     Q_INVOKABLE QJsonObject getDatabaseStats();
-    Q_INVOKABLE int getTotalEntryCount();
+    Q_INVOKABLE int getTotalEntryCount(const QString &search = QString());
     Q_INVOKABLE bool setData(const QString &key, const QString &value);
     Q_INVOKABLE bool deleteData(const QString &key);
     Q_INVOKABLE bool clearData();
