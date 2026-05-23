@@ -1,31 +1,110 @@
 # RocksDB Viewer (Qt/QML Edition)
 
-**Qt 6.9.1 Quick (QML)** と **C++20** で構築された、RocksDB データベースの閲覧・編集用アプリケーションです。  
+**Qt 6.9 Quick (QML)** と **C++20** で構築された、RocksDB データベースの閲覧・編集用アプリケーションです。  
 
 Python/pywebview/HTMLで実装されていたRocksDBViewerを、ブラウザやWebViewに依存しないネイティブアプリケーションとして再実装したもので、  
 同等の機能をネイティブパフォーマンスで提供します。  
 
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Qt Version](https://img.shields.io/badge/Qt-6.9+-green.svg)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)
+
+<p align="center">
+  <img src="assets/RocksDBViewer@256.png" alt="RocksDB Viewer" width="256" valign="middle">
+  <img src="assets/Qt.png" alt="Qt" width="139" valign="middle">
+</p>
+
 ## 動作要件
 
-- **Qt** 6.5 以降 (動作確認済み: 6.9.1)
-- **RocksDB** C++ライブラリ (動作確認済み: 11.1.1)
+- **Qt** 6.9 以降 (動作確認済み: 6.9.1)
+- **RocksDB** C++ライブラリおよびヘッダ (動作確認済み: 11.1.1)
 - **CMake** 3.16 以降
 - **C++20** に対応したコンパイラ (GCC 11+, Clang 14+, MSVC 2019+)
 
+> **RocksDB に関する注意:**  
+> 現在の CMake 設定では、RocksDB をシステムパスから自動探索しません。  
+> `ROCKSDB_ROOT` には、`include/rocksdb/db.h` と `lib/librocksdb.*` または `lib64/librocksdb.*` を含むRocksDBのインストール先、  
+> またはソースビルド先を指定してください。  
+
 ## ビルド
 
-### 1. 構成
+### 1. RocksDB の準備
+
+RocksDB をパッケージマネージャで導入できる場合は、そのインストールプレフィックスを `ROCKSDB_ROOT` に指定してください。  
+
+依存関係パッケージのインストール例:
+
+#### RocksDB をビルドする場合の依存関係
+
+**RHEL**  
+
+```bash
+sudo dnf groupinstall "Development Tools"
+sudo dnf install cmake git \
+    snappy-devel zlib-devel bzip2-devel lz4-devel libzstd-devel gflags-devel
+```
+
+**SUSE**  
+
+```bash
+sudo zypper install -t pattern devel_basis
+sudo zypper install cmake git \
+    snappy-devel zlib-devel libbz2-devel liblz4-devel libzstd-devel gflags-devel
+```
+
+#### 本アプリケーションをビルドする場合の依存関係
+
+**RHEL**  
+
+```bash
+sudo dnf groupinstall "Development Tools"
+sudo dnf install cmake git \
+    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel qt6-linguist \
+    rocksdb-devel
+```
+
+**SUSE**  
+
+```bash
+sudo zypper install -t pattern devel_basis
+sudo zypper install cmake git \
+    qt6-core-devel qt6-gui-devel qt6-quick-devel qt6-quickcontrols2-devel qt6-linguist-devel \
+    rocksdb-devel
+```
+
+> **注意:**  
+> ディストリビューションのリポジトリに適切なRocksDBパッケージがない場合は、以下のソースビルド手順を利用してください。  
+> ディストリビューション付属のQtパッケージで **Qt 6.9 以降** を満たせない場合は、環境に合わせて別途 Qt 6.9 を導入してください。  
+
+パッケージマネージャに RocksDB が存在しない場合は、公式リポジトリおよびインストールガイドを参照してソースからビルドしてください。  
+
+- https://github.com/facebook/rocksdb
+- https://github.com/facebook/rocksdb/blob/main/INSTALL.md
+
+ソースビルド例:  
+
+```bash
+git clone https://github.com/facebook/rocksdb.git
+cd rocksdb
+make shared_lib
+# または: make static_lib
+```
+
+### 2. 構成
 
 ```bash
 mkdir build && cd build
 
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DROCKSDB_ROOT=/path/to/rocksdb \
+         -DCMAKE_BUILD_TYPE=Release
 
 # またはQtのパスを指定する場合
-# cmake .. -DCMAKE_PREFIX_PATH=/path/to/qt/6.9.1/gcc_64 -DCMAKE_BUILD_TYPE=Release
+cmake .. -DROCKSDB_ROOT=/path/to/rocksdb \
+         -DCMAKE_PREFIX_PATH=/path/to/qt/6.9.1/gcc_64 \
+         -DCMAKE_BUILD_TYPE=Release
 ```
 
-### 2. ビルド
+### 3. ビルド
 
 ```bash
 cmake --build . -j$(nproc)
@@ -42,10 +121,11 @@ cmake --build . -j$(nproc)
 ```
 
 > **注意:**  
-> RocksDBの共有ライブラリがシステムのライブラリパスに含まれていない場合は、`LD_LIBRARY_PATH` を設定してください。  
+> RocksDB の共有ライブラリがシステムのライブラリパスに含まれていない場合は、`ROCKSDB_ROOT` 配下の `lib` または `lib64` を `LD_LIBRARY_PATH` に設定してください。  
 
 ```bash
 export LD_LIBRARY_PATH=/path/to/rocksdb/lib:$LD_LIBRARY_PATH
+# または: export LD_LIBRARY_PATH=/path/to/rocksdb/lib64:$LD_LIBRARY_PATH
 ./RocksDBViewer
 ```
 

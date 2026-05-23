@@ -1,32 +1,113 @@
 # RocksDB Viewer (Qt/QML Edition)
 
 A desktop GUI application for browsing and editing RocksDB databases,  
-built with **Qt 6.9.1 Quick (QML)** and **C++20**.  
+built with **Qt 6.9 Quick (QML)** and **C++20**.  
 
 This is a native reimplementation of the original Python/pywebview/HTML-based RocksDBViewer,  
 offering the same feature set with native performance and no browser/WebView dependency.  
 
+![License](https://img.shields.io/badge/License-MIT-blue.svg)
+![Qt Version](https://img.shields.io/badge/Qt-6.9+-green.svg)
+![Platform](https://img.shields.io/badge/Platform-Windows%20%7C%20Linux-lightgrey.svg)
+
+<p align="center">
+  <img src="assets/RocksDBViewer@256.png" alt="RocksDB Viewer" width="256" valign="middle">
+  <img src="assets/Qt.png" alt="Qt" width="139" valign="middle">
+</p>
+
 ## Requirements
 
-- **Qt** 6.5 or later (tested with 6.9.1)
-- **RocksDB** C++ library (tested with 11.1.1)
+- **Qt** 6.9 or later (tested with 6.9.1)
+- **RocksDB** C++ library and headers (tested with 11.1.1)
 - **CMake** 3.16 or later
 - **C++ Compiler** with C++20 support (GCC 11+, Clang 14+, MSVC 2019+)
 
+> **RocksDB requirement:**  
+> The current CMake configuration does not search system paths for RocksDB automatically.  
+> Set `ROCKSDB_ROOT` to a RocksDB installation or source-build directory that contains  
+> `include/rocksdb/db.h` and either `lib/librocksdb.*` or `lib64/librocksdb.*`.  
+
 ## Build
 
-### 1. Configure
+### 1. Prepare RocksDB
+
+Install RocksDB with your package manager when it is available, and set `ROCKSDB_ROOT` to that installation prefix.  
+
+Example dependency installation commands:
+
+#### RocksDB build dependencies
+
+**RHEL**  
+
+```bash
+sudo dnf groupinstall "Development Tools"
+sudo dnf install cmake git \
+    snappy-devel zlib-devel bzip2-devel lz4-devel libzstd-devel gflags-devel
+```
+
+**SUSE**  
+
+```bash
+sudo zypper install -t pattern devel_basis
+sudo zypper install cmake git \
+    snappy-devel zlib-devel libbz2-devel liblz4-devel libzstd-devel gflags-devel
+```
+
+#### RocksDB Viewer build dependencies
+
+**RHEL**  
+
+```bash
+sudo dnf groupinstall "Development Tools"
+sudo dnf install cmake git \
+    qt6-qtbase-devel qt6-qtdeclarative-devel qt6-qtquickcontrols2-devel qt6-linguist \
+    rocksdb-devel
+```
+
+**SUSE**  
+
+```bash
+sudo zypper install -t pattern devel_basis
+sudo zypper install cmake git \
+    qt6-core-devel qt6-gui-devel qt6-quick-devel qt6-quickcontrols2-devel qt6-linguist-devel \
+    rocksdb-devel
+```
+
+> **Note:**  
+> If your distribution does not provide a suitable RocksDB package, follow the source-build instructions below.  
+> If the distribution Qt packages do not satisfy the required Qt 6.9 or later,  
+> install Qt 6.9 separately for your environment.  
+
+If your package manager does not provide RocksDB,  
+build it from source by following the official repository and install guide:  
+
+- https://github.com/facebook/rocksdb
+- https://github.com/facebook/rocksdb/blob/main/INSTALL.md
+
+Example source build:  
+
+```bash
+git clone https://github.com/facebook/rocksdb.git
+cd rocksdb
+make shared_lib
+# or: make static_lib
+```
+
+### 2. Configure
 
 ```bash
 mkdir build && cd build
 
-cmake .. -DCMAKE_BUILD_TYPE=Release
+cmake .. -DROCKSDB_ROOT=/path/to/rocksdb \
+         -DCMAKE_BUILD_TYPE=Release
 
 # Or cmake with Qt path
-# cmake .. -DCMAKE_PREFIX_PATH=/path/to/qt/6.9.1/gcc_64 -DCMAKE_BUILD_TYPE=Release
+cmake .. -DROCKSDB_ROOT=/path/to/rocksdb \
+         -DCMAKE_PREFIX_PATH=/path/to/qt/6.9.1/gcc_64 \
+         -DCMAKE_BUILD_TYPE=Release
 ```
 
-### 2. Build
+### 3. Build
 
 ```bash
 cmake --build . -j$(nproc)
@@ -43,10 +124,12 @@ cmake --build . -j$(nproc)
 ```
 
 > **Note:**  
-> If RocksDB shared library is not in the system library path, set `LD_LIBRARY_PATH`:  
+> If the RocksDB shared library is not in the system library path,  
+> set `LD_LIBRARY_PATH` to the RocksDB `lib` or `lib64` directory under `ROCKSDB_ROOT`:  
 
 ```bash
 export LD_LIBRARY_PATH=/path/to/rocksdb/lib:$LD_LIBRARY_PATH
+# or: export LD_LIBRARY_PATH=/path/to/rocksdb/lib64:$LD_LIBRARY_PATH
 ./RocksDBViewer
 ```
 
