@@ -70,6 +70,7 @@ set(QML_MODULE_NAME "RocksDBViewerApp")
 set(EXECUTABLE_NAME "RocksDBViewer")
 
 qt_add_executable(${EXECUTABLE_NAME}
+    WIN32
     ${SOURCES}
     ${HEADERS}
 )

@@ -15,6 +15,14 @@ offering the same feature set with native performance and no browser/WebView dep
   <img src="assets/Qt.png" alt="Qt" width="139" valign="middle">
 </p>
 
+## Screenshots
+
+| Main Window | Select Database |
+|:---:|:---:|
+| <img src="screenshot/main.png" alt="Main window" width="360"> | <img src="screenshot/select_db.png" alt="Select database" width="360"> |
+| **Database View** | **Edit Entry** |
+| <img src="screenshot/read_db.png" alt="Database view" width="360"> | <img src="screenshot/edit_db.png" alt="Edit entry" width="360"> |
+
 ## Requirements
 
 - **Qt** 6.9 or later (tested with 6.9.1)
@@ -172,21 +180,20 @@ export LD_LIBRARY_PATH=/path/to/rocksdb/lib:$LD_LIBRARY_PATH
 RocksDBViewer/
 ├── CMakeLists.txt
 ├── README.md
+├── README_JP.md
 ├── LICENSE
-├── src/
-│   ├── main.cpp
-│   ├── backend/
-│   │   ├── RocksDBBackend.h/.cpp    # DB operations, CRUD, file I/O
-│   │   ├── EntryModel.h/.cpp        # QAbstractListModel for table data
-│   │   └── FilterProxyModel.h/.cpp  # Search + sort proxy model
-│   └── utils/
-│       ├── JsonUtils.h/.cpp         # JSON format/minify/validate/skeleton
-│       ├── I18nManager.h/.cpp       # Language switching
-│       ├── FileSystemModel.h/.cpp   # File system model for custom picker
-│       ├── SettingsMigration.h/.cpp # Settings storage migration
-│       └── SettingsKeys.h           # Settings key constants
+├── RocksDBViewer.desktop.in         # Linux desktop entry template
+├── assets/
+│   ├── RocksDBViewer@128.png
+│   ├── RocksDBViewer@256.png
+│   ├── RocksDBViewer@512.png
+│   └── Qt.png
+├── i18n/
+│   ├── rocksdbviewer_ja.ts          # Japanese translations
+│   └── rocksdbviewer_en.ts          # English source strings
+├── licenses/                        # Third-party license texts
 ├── qml/
-│   ├── main.qml                     # Main window layout
+│   ├── main.qml                     # Main application window
 │   ├── Theme.qml                    # Theme constants
 │   └── components/
 │       ├── HeaderBar.qml
@@ -199,13 +206,24 @@ RocksDBViewer/
 │       ├── StatsPanel.qml
 │       ├── SkeletonMenu.qml
 │       └── FilePickerDialog.qml
-├── i18n/
-│   ├── rocksdbviewer_ja.ts          # Japanese translations
-│   └── rocksdbviewer_en.ts          # English translations (source)
-├── assets/
-│   ├── RocksDBViewer@128.png
-│   ├── RocksDBViewer@256.png
-│   └── RocksDBViewer@512.png
+├── sample-db/                       # Sample RocksDB data for local testing
+├── screenshot/
+│   ├── main.png
+│   ├── select_db.png
+│   ├── read_db.png
+│   └── edit_db.png
+├── src/
+│   ├── main.cpp                     # Application entry point and QML bootstrapping
+│   ├── backend/
+│   │   ├── RocksDBBackend.h/.cpp    # RocksDB access, CRUD, import/export
+│   │   ├── EntryModel.h/.cpp        # QAbstractListModel for entry data
+│   │   └── FilterProxyModel.h/.cpp  # Search, sort, and pagination proxy
+│   └── utils/
+│       ├── JsonUtils.h/.cpp         # JSON formatting, minify, validate, skeleton helpers
+│       ├── I18nManager.h/.cpp       # Runtime language switching
+│       ├── FileSystemModel.h/.cpp   # File system model for custom picker dialogs
+│       ├── SettingsMigration.h/.cpp # Settings storage migration helpers
+│       └── SettingsKeys.h           # Persistent settings key constants
 └── tools/
     └── create_sample_db.cpp         # Sample database generator
 ```

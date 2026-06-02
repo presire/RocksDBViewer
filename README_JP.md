@@ -14,6 +14,14 @@ Python/pywebview/HTMLで実装されていたRocksDBViewerを、ブラウザやW
   <img src="assets/Qt.png" alt="Qt" width="139" valign="middle">
 </p>
 
+## スクリーンショット
+
+| メイン画面 | データベース選択 |
+|:---:|:---:|
+| <img src="screenshot/main.png" alt="メイン画面" width="360"> | <img src="screenshot/select_db.png" alt="データベース選択" width="360"> |
+| **データベース閲覧** | **エントリー編集** |
+| <img src="screenshot/read_db.png" alt="データベース閲覧" width="360"> | <img src="screenshot/edit_db.png" alt="エントリー編集" width="360"> |
+
 ## 動作要件
 
 - **Qt** 6.9 以降 (動作確認済み: 6.9.1)
@@ -168,21 +176,20 @@ export LD_LIBRARY_PATH=/path/to/rocksdb/lib:$LD_LIBRARY_PATH
 RocksDBViewer/
 ├── CMakeLists.txt
 ├── README.md
+├── README_JP.md
 ├── LICENSE
-├── src/
-│   ├── main.cpp
-│   ├── backend/
-│   │   ├── RocksDBBackend.h/.cpp    # DB 操作、CRUD、ファイル入出力
-│   │   ├── EntryModel.h/.cpp        # テーブルデータ用 QAbstractListModel
-│   │   └── FilterProxyModel.h/.cpp  # 検索・ソート用プロキシモデル
-│   └── utils/
-│       ├── JsonUtils.h/.cpp         # JSON 整形/圧縮/検証/スケルトン
-│       ├── I18nManager.h/.cpp       # 言語切り替え
-│       ├── FileSystemModel.h/.cpp   # カスタムピッカー用ファイルシステムモデル
-│       ├── SettingsMigration.h/.cpp # 設定ストレージの移行
-│       └── SettingsKeys.h           # 設定キー定数
+├── RocksDBViewer.desktop.in         # Linux デスクトップエントリーのテンプレート
+├── assets/
+│   ├── RocksDBViewer@128.png
+│   ├── RocksDBViewer@256.png
+│   ├── RocksDBViewer@512.png
+│   └── Qt.png
+├── i18n/
+│   ├── rocksdbviewer_ja.ts          # 日本語翻訳
+│   └── rocksdbviewer_en.ts          # 英語原文
+├── licenses/                        # サードパーティライセンス文書
 ├── qml/
-│   ├── main.qml                     # メインウィンドウレイアウト
+│   ├── main.qml                     # アプリケーションのメイン画面
 │   ├── Theme.qml                    # テーマ定数
 │   └── components/
 │       ├── HeaderBar.qml
@@ -195,13 +202,24 @@ RocksDBViewer/
 │       ├── StatsPanel.qml
 │       ├── SkeletonMenu.qml
 │       └── FilePickerDialog.qml
-├── i18n/
-│   ├── rocksdbviewer_ja.ts          # 日本語翻訳
-│   └── rocksdbviewer_en.ts          # 英語翻訳（原文）
-├── assets/
-│   ├── RocksDBViewer@128.png
-│   ├── RocksDBViewer@256.png
-│   └── RocksDBViewer@512.png
+├── sample-db/                       # ローカル検証用のサンプル RocksDB データ
+├── screenshot/
+│   ├── main.png
+│   ├── select_db.png
+│   ├── read_db.png
+│   └── edit_db.png
+├── src/
+│   ├── main.cpp                     # アプリ起動処理と QML 初期化
+│   ├── backend/
+│   │   ├── RocksDBBackend.h/.cpp    # RocksDB アクセス、CRUD、インポート/エクスポート
+│   │   ├── EntryModel.h/.cpp        # エントリーデータ用 QAbstractListModel
+│   │   └── FilterProxyModel.h/.cpp  # 検索・ソート・ページング用プロキシモデル
+│   └── utils/
+│       ├── JsonUtils.h/.cpp         # JSON 整形、圧縮、検証、スケルトン補助
+│       ├── I18nManager.h/.cpp       # 実行時の言語切り替え
+│       ├── FileSystemModel.h/.cpp   # カスタムピッカー用ファイルシステムモデル
+│       ├── SettingsMigration.h/.cpp # 設定ストレージ移行ヘルパー
+│       └── SettingsKeys.h           # 永続設定キー定数
 └── tools/
     └── create_sample_db.cpp         # サンプルデータベース生成ツール
 ```
