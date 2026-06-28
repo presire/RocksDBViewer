@@ -179,6 +179,8 @@ export LD_LIBRARY_PATH=/path/to/rocksdb/lib:$LD_LIBRARY_PATH
 ```
 RocksDBViewer/
 ├── CMakeLists.txt
+├── docs/
+│   └── durability-testing.md        # Write durability / corruption test procedure
 ├── README.md
 ├── README_JP.md
 ├── LICENSE

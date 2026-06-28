@@ -4,6 +4,8 @@
 #include <rocksdb/db.h>
 #include <rocksdb/iterator.h>
 #include <rocksdb/write_batch.h>
+#include <rocksdb/convenience.h>
+#include <rocksdb/utilities/options_util.h>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QFile>
@@ -15,6 +17,7 @@
 #include <QDirIterator>
 #include <QFileInfo>
 #include <QStringDecoder>
+#include <algorithm>
 #include <optional>
 
 namespace {
@@ -33,6 +36,47 @@ std::string utf8BytesFromString(const QString &text)
 {
     QByteArray bytes = text.toUtf8();
     return std::string(bytes.constData(), static_cast<size_t>(bytes.size()));
+}
+
+QString statusToQString(const rocksdb::Status &status)
+{
+    return QString::fromStdString(status.ToString());
+}
+
+rocksdb::WriteOptions makeDurableWriteOptions()
+{
+    rocksdb::WriteOptions options;
+    options.sync = true;
+    options.disableWAL = false;
+    return options;
+}
+
+rocksdb::WriteOptions makeBatchWriteOptions()
+{
+    rocksdb::WriteOptions options;
+    options.sync = false;
+    options.disableWAL = false;
+    return options;
+}
+
+rocksdb::DBOptions makeOpenDbOptions()
+{
+    rocksdb::DBOptions options;
+    options.create_if_missing = false;
+    options.create_missing_column_families = false;
+    options.wal_recovery_mode = rocksdb::WALRecoveryMode::kPointInTimeRecovery;
+    return options;
+}
+
+rocksdb::Status persistColumnFamily(rocksdb::DB *db, rocksdb::ColumnFamilyHandle *handle)
+{
+    rocksdb::Status syncStatus = db->SyncWAL();
+    if (!syncStatus.ok() && syncStatus.IsNotSupported()) {
+        rocksdb::FlushOptions flushOptions;
+        flushOptions.wait = true;
+        return db->Flush(flushOptions, handle);
+    }
+    return syncStatus;
 }
 }
 
@@ -95,27 +139,67 @@ bool RocksDBBackend::openDatabase(const QString &path)
 {
     closeDatabase();
 
+    const std::string dbPath = utf8BytesFromString(path);
+
     std::vector<std::string> cfs;
-    rocksdb::Status s = rocksdb::DB::ListColumnFamilies(rocksdb::Options(), utf8BytesFromString(path), &cfs);
+    rocksdb::Status s = rocksdb::DB::ListColumnFamilies(rocksdb::Options(), dbPath, &cfs);
     if (!s.ok()) {
         cfs = {"default"};
     }
 
+    // Issue #2 fix: Load persisted OPTIONS file to preserve the original
+    // table_factory settings (especially BlockBasedTableOptions::format_version).
+    // Opening with RocksDB 11.x defaults would write new SST files in
+    // format_version 7, which is unreadable by older tooling (e.g. ldb < 10.4).
+    // We also pass ignore_unknown_options=true so forward-compatibility options
+    // stored by a newer RocksDB do not block opening on this build.
+    rocksdb::ConfigOptions configOptions;
+    configOptions.ignore_unknown_options = true;
+
+    rocksdb::DBOptions dbOptions = makeOpenDbOptions();
+    std::vector<rocksdb::ColumnFamilyDescriptor> loadedDescs;
+    std::shared_ptr<rocksdb::Cache> cache;
+    rocksdb::Status loadStatus = rocksdb::LoadLatestOptions(
+        configOptions, dbPath, &dbOptions, &loadedDescs, &cache);
+    bool useLoaded = false;
+    if (loadStatus.ok()) {
+        useLoaded = true;
+        // Re-apply safety-critical open policies regardless of persisted state.
+        dbOptions.create_if_missing = false;
+        dbOptions.create_missing_column_families = false;
+        dbOptions.wal_recovery_mode = rocksdb::WALRecoveryMode::kPointInTimeRecovery;
+    } else {
+        qWarning() << "LoadLatestOptions failed, falling back to default options:"
+                   << statusToQString(loadStatus);
+    }
+
     std::vector<rocksdb::ColumnFamilyDescriptor> descriptors;
+    descriptors.reserve(cfs.size());
     for (const auto &name : cfs) {
-        descriptors.emplace_back(name, rocksdb::ColumnFamilyOptions());
+        if (useLoaded) {
+            auto it = std::find_if(
+                loadedDescs.begin(), loadedDescs.end(),
+                [&name](const rocksdb::ColumnFamilyDescriptor &d) { return d.name == name; });
+            if (it != loadedDescs.end()) {
+                descriptors.emplace_back(name, it->options);
+            } else {
+                descriptors.emplace_back(name, rocksdb::ColumnFamilyOptions());
+            }
+        } else {
+            descriptors.emplace_back(name, rocksdb::ColumnFamilyOptions());
+        }
     }
 
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
     std::unique_ptr<rocksdb::DB> db;
-    s = rocksdb::DB::Open(rocksdb::DBOptions(), utf8BytesFromString(path), descriptors, &handles, &db);
+    s = rocksdb::DB::Open(dbOptions, dbPath, descriptors, &handles, &db);
     if (!s.ok()) {
         if (db) {
             for (auto* h : handles) {
                 db->DestroyColumnFamilyHandle(h);
             }
         }
-        emit errorOccurred(QString::fromStdString(s.ToString()));
+        emit errorOccurred(statusToQString(s));
         return false;
     }
 
@@ -144,16 +228,33 @@ void RocksDBBackend::closeDatabase()
 {
     if (!d->db) return;
 
+    rocksdb::Status syncStatus = d->db->SyncWAL();
+    if (!syncStatus.ok() && syncStatus.IsNotSupported()) {
+        rocksdb::FlushOptions flushOptions;
+        flushOptions.wait = true;
+        for (auto* h : d->handles) {
+            rocksdb::Status flushStatus = d->db->Flush(flushOptions, h);
+            if (!flushStatus.ok()) {
+                emit errorOccurred(statusToQString(flushStatus));
+                qWarning() << "RocksDB Flush before close failed:" << statusToQString(flushStatus);
+            }
+        }
+    } else if (!syncStatus.ok()) {
+        emit errorOccurred(statusToQString(syncStatus));
+        qWarning() << "RocksDB SyncWAL before close failed:" << statusToQString(syncStatus);
+    }
+
     for (auto* h : d->handles) {
         rocksdb::Status s = d->db->DestroyColumnFamilyHandle(h);
         if (!s.ok()) {
-            emit errorOccurred(QString::fromStdString(s.ToString()));
+            emit errorOccurred(statusToQString(s));
         }
     }
     d->handles.clear();
     rocksdb::Status closeStatus = d->db->Close();
     if (!closeStatus.ok()) {
-        emit errorOccurred(QString::fromStdString(closeStatus.ToString()));
+        emit errorOccurred(statusToQString(closeStatus));
+        qWarning() << "RocksDB close failed:" << statusToQString(closeStatus);
     }
     d->db.reset();
     d->dbPath.clear();
@@ -290,9 +391,9 @@ bool RocksDBBackend::setData(const QString &key, const QString &value)
     auto* cf = getColumnFamilyHandle(d->currentCf);
     if (!cf) return false;
 
-    rocksdb::Status s = d->db->Put(rocksdb::WriteOptions(), cf, utf8BytesFromString(key), utf8BytesFromString(value));
+    rocksdb::Status s = d->db->Put(makeDurableWriteOptions(), cf, utf8BytesFromString(key), utf8BytesFromString(value));
     if (!s.ok()) {
-        emit errorOccurred(QString::fromStdString(s.ToString()));
+        emit errorOccurred(statusToQString(s));
         return false;
     }
     emit dataChanged();
@@ -307,9 +408,9 @@ bool RocksDBBackend::deleteData(const QString &key)
     auto* cf = getColumnFamilyHandle(d->currentCf);
     if (!cf) return false;
 
-    rocksdb::Status s = d->db->Delete(rocksdb::WriteOptions(), cf, utf8BytesFromString(key));
+    rocksdb::Status s = d->db->Delete(makeDurableWriteOptions(), cf, utf8BytesFromString(key));
     if (!s.ok()) {
-        emit errorOccurred(QString::fromStdString(s.ToString()));
+        emit errorOccurred(statusToQString(s));
         return false;
     }
     emit dataChanged();
@@ -330,18 +431,23 @@ bool RocksDBBackend::clearData()
     for (it->SeekToFirst(); it->Valid(); it->Next()) {
         rocksdb::Status s = batch.Delete(cf, it->key());
         if (!s.ok()) {
-            emit errorOccurred(QString::fromStdString(s.ToString()));
+            emit errorOccurred(statusToQString(s));
             return false;
         }
     }
     if (!it->status().ok()) {
-        emit errorOccurred(QString::fromStdString(it->status().ToString()));
+        emit errorOccurred(statusToQString(it->status()));
         return false;
     }
 
-    rocksdb::Status s = d->db->Write(rocksdb::WriteOptions(), &batch);
+    rocksdb::Status s = d->db->Write(makeBatchWriteOptions(), &batch);
     if (!s.ok()) {
-        emit errorOccurred(QString::fromStdString(s.ToString()));
+        emit errorOccurred(statusToQString(s));
+        return false;
+    }
+    rocksdb::Status syncStatus = persistColumnFamily(d->db.get(), cf);
+    if (!syncStatus.ok()) {
+        emit errorOccurred(statusToQString(syncStatus));
         return false;
     }
     emit dataChanged();
@@ -406,15 +512,20 @@ bool RocksDBBackend::importData(const QJsonObject &data)
         }
         rocksdb::Status s = batch.Put(cf, utf8BytesFromString(it.key()), utf8BytesFromString(valueStr));
         if (!s.ok()) {
-            emit errorOccurred(QString::fromStdString(s.ToString()));
+            emit errorOccurred(statusToQString(s));
             return false;
         }
         count++;
     }
 
-    rocksdb::Status s = d->db->Write(rocksdb::WriteOptions(), &batch);
+    rocksdb::Status s = d->db->Write(makeBatchWriteOptions(), &batch);
     if (!s.ok()) {
-        emit errorOccurred(QString::fromStdString(s.ToString()));
+        emit errorOccurred(statusToQString(s));
+        return false;
+    }
+    rocksdb::Status syncStatus = persistColumnFamily(d->db.get(), cf);
+    if (!syncStatus.ok()) {
+        emit errorOccurred(statusToQString(syncStatus));
         return false;
     }
     emit dataChanged();
