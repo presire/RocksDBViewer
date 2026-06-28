@@ -3,6 +3,18 @@
 #include <vector>
 #include <memory>
 
+/**
+ * @brief サンプルRocksDBデータベースを生成する
+ *
+ * 指定されたパスに default / users / products / orders / config / logs の
+ * 6つのカラムファミリーを持つサンプルデータベースを作成する。
+ * 既存のデータベースがない場合は新規作成し、各カラムファミリーに
+ * テスト用のJSON形式データを書き込む。
+ *
+ * @param argc コマンドライン引数の数
+ * @param argv コマンドライン引数の配列。argv[1]に出力先DBパスを指定可能
+ * @return 成功時は0、失敗時は1
+ */
 int main(int argc, char* argv[]) {
     std::string db_path = (argc > 1) ? argv[1] : "sample_rocksdb";
 
@@ -53,6 +65,12 @@ int main(int argc, char* argv[]) {
         }
     }
 
+    /**
+     * @brief 指定名のカラムファミリーハンドルを取得する
+     *
+     * @param name カラムファミリー名
+     * @return ハンドルポインタ。見つからない場合はデフォルトカラムファミリー
+     */
     auto getHandle = [&](const std::string& name) -> rocksdb::ColumnFamilyHandle* {
         for (auto* h : handles) {
             if (h->GetName() == name) return h;

@@ -17,6 +17,16 @@
 #include "utils/SettingsMigration.h"
 #include "utils/SettingsKeys.h"
 
+/**
+ * @brief アプリケーションのエントリーポイント
+ *
+ * Qt/QMLアプリケーションを初期化し、必要なシングルトン・型を登録してメインQMLを読み込む
+ * コマンドライン引数でデータベースパスが指定された場合は起動時に開く
+ *
+ * @param argc コマンドライン引数の数
+ * @param argv コマンドライン引数の配列
+ * @return アプリケーションの終了コード
+ */
 int main(int argc, char *argv[])
 {
     // Qt GUIアプリケーションの初期化

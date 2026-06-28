@@ -1,17 +1,38 @@
 #include "EntryModel.h"
 #include <QJsonDocument>
 
+/**
+ * @brief EntryModelを構築する
+ *
+ * @param parent 親QObject
+ */
 EntryModel::EntryModel(QObject *parent)
     : QAbstractListModel(parent)
 {
 }
 
+/**
+ * @brief モデルが保持する行数を返す
+ *
+ * @param parent 親インデックス (通常は使用しない)
+ * @return エントリ数
+ */
 int EntryModel::rowCount(const QModelIndex &parent) const
 {
     Q_UNUSED(parent)
     return m_entries.size();
 }
 
+/**
+ * @brief 指定インデックス・ロールのデータを返す
+ *
+ * DisplayValueRole の場合、JSONであれば整形し、200文字を超える場合は
+ * 末尾に "..." を付けて省略表示する。
+ *
+ * @param index モデルインデックス
+ * @param role Qtロール
+ * @return ロールに対応するデータ
+ */
 QVariant EntryModel::data(const QModelIndex &index, int role) const
 {
     if (!index.isValid() || index.row() >= m_entries.size())
@@ -40,6 +61,11 @@ QVariant EntryModel::data(const QModelIndex &index, int role) const
     }
 }
 
+/**
+ * @brief QML側で使用するロール名を返す
+ *
+ * @return ロール番号とロール名のマッピング
+ */
 QHash<int, QByteArray> EntryModel::roleNames() const
 {
     QHash<int, QByteArray> roles;
@@ -49,6 +75,11 @@ QHash<int, QByteArray> EntryModel::roleNames() const
     return roles;
 }
 
+/**
+ * @brief エントリリストを一括設定する
+ *
+ * @param entries キーと値のペアを含むJSONオブジェクト
+ */
 void EntryModel::setEntries(const QJsonObject &entries)
 {
     beginResetModel();
@@ -59,6 +90,9 @@ void EntryModel::setEntries(const QJsonObject &entries)
     endResetModel();
 }
 
+/**
+ * @brief モデルのデータをクリアする
+ */
 void EntryModel::clear()
 {
     beginResetModel();
@@ -66,6 +100,12 @@ void EntryModel::clear()
     endResetModel();
 }
 
+/**
+ * @brief 指定インデックスのキーを返す
+ *
+ * @param index インデックス
+ * @return キー文字列。範囲外の場合は空文字列
+ */
 QString EntryModel::keyAt(int index) const
 {
     if (index < 0 || index >= m_entries.size())
@@ -73,6 +113,12 @@ QString EntryModel::keyAt(int index) const
     return m_entries.at(index).key;
 }
 
+/**
+ * @brief 指定インデックスの値を返す
+ *
+ * @param index インデックス
+ * @return 値文字列。範囲外の場合は空文字列
+ */
 QString EntryModel::valueAt(int index) const
 {
     if (index < 0 || index >= m_entries.size())

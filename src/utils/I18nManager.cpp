@@ -4,17 +4,36 @@
 #include <QFile>
 #include <QDebug>
 
+/**
+ * @brief I18nManagerを構築する
+ *
+ * @param engine 再翻訳を行う対象のQQmlEngine
+ * @param parent 親QObject
+ */
 I18nManager::I18nManager(QQmlEngine *engine, QObject *parent)
     : QObject(parent)
     , m_engine(engine)
 {
 }
 
+/**
+ * @brief 現在設定されている言語コードを返す
+ *
+ * @return 言語コード (例: "ja", "en")
+ */
 QString I18nManager::currentLanguage() const
 {
     return m_currentLanguage;
 }
 
+/**
+ * @brief 現在の言語を設定する
+ *
+ * まず、実行ファイルと同じディレクトリのファイルシステムパスから翻訳ファイルを読み込み、失敗した場合はリソース内のパスをフォールバックとして使用する
+ * 読み込みに成功した場合は翻訳をインストールし、QMLエンジンを再翻訳する
+ *
+ * @param lang 言語コード
+ */
 void I18nManager::setCurrentLanguage(const QString &lang)
 {
     if (m_currentLanguage == lang) return;
@@ -43,6 +62,12 @@ void I18nManager::setCurrentLanguage(const QString &lang)
     }
 }
 
+/**
+ * @brief 指定文字列を翻訳する
+ *
+ * @param text 翻訳対象文字列
+ * @return 翻訳後の文字列
+ */
 QString I18nManager::tr(const QString &text) const
 {
     return QObject::tr(text.toUtf8().constData());

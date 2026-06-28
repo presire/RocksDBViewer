@@ -6,11 +6,24 @@
 #include <QVariantMap>
 #include <QRegularExpression>
 
+/**
+ * @brief JsonUtilsを構築する
+ *
+ * @param parent 親QObject
+ */
 JsonUtils::JsonUtils(QObject *parent)
     : QObject(parent)
 {
 }
 
+/**
+ * @brief JSON文字列を整形（インデント）して返す
+ *
+ * 無効なJSONの場合は入力をそのまま返す
+ *
+ * @param json JSON文字列
+ * @return 整形後のJSON文字列
+ */
 QString JsonUtils::formatJson(const QString &json)
 {
     QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
@@ -18,6 +31,14 @@ QString JsonUtils::formatJson(const QString &json)
     return QString::fromUtf8(doc.toJson(QJsonDocument::Indented));
 }
 
+/**
+ * @brief JSON文字列を最小化（1行）して返す
+ *
+ * 無効なJSONの場合は入力をそのまま返す
+ *
+ * @param json JSON文字列
+ * @return 最小化後のJSON文字列
+ */
 QString JsonUtils::minifyJson(const QString &json)
 {
     QJsonDocument doc = QJsonDocument::fromJson(json.toUtf8());
@@ -25,6 +46,12 @@ QString JsonUtils::minifyJson(const QString &json)
     return QString::fromUtf8(doc.toJson(QJsonDocument::Compact));
 }
 
+/**
+ * @brief 文字列が有効なJSONか判定する
+ *
+ * @param json 判定対象文字列
+ * @return 有効なJSONの場合は true
+ */
 bool JsonUtils::isValidJson(const QString &json)
 {
     QJsonParseError err;
@@ -32,6 +59,15 @@ bool JsonUtils::isValidJson(const QString &json)
     return err.error == QJsonParseError::NoError;
 }
 
+/**
+ * @brief JSON文字列の検証結果メッセージを返す
+ *
+ * 有効なJSONの場合は "Valid JSON format"、空文字列の場合は空文字列、
+ * それ以外は "Not in JSON format (will be saved as string)" を返す
+ *
+ * @param json JSON文字列
+ * @return 検証結果メッセージ
+ */
 QString JsonUtils::validationMessage(const QString &json)
 {
     QJsonParseError err;
@@ -45,6 +81,14 @@ QString JsonUtils::validationMessage(const QString &json)
     return QObject::tr("Not in JSON format (will be saved as string)");
 }
 
+/**
+ * @brief 文字列がJSONらしい形式か判定する
+ *
+ * 先頭と末尾が "{" と "}" または "[" と "]" で囲まれているかを確認する
+ *
+ * @param value 判定対象文字列
+ * @return JSONらしい形式の場合は true
+ */
 bool JsonUtils::isJsonLike(const QString &value)
 {
     QString trimmed = value.trimmed();
@@ -52,6 +96,11 @@ bool JsonUtils::isJsonLike(const QString &value)
            (trimmed.startsWith('[') && trimmed.endsWith(']'));
 }
 
+/**
+ * @brief スケルトンテンプレートリストを返す
+ *
+ * @return テンプレート情報のリスト
+ */
 static const QVariantList &skeletonData()
 {
     static const QVariantList data = []() {
@@ -77,11 +126,22 @@ static const QVariantList &skeletonData()
     return data;
 }
 
+/**
+ * @brief JSONスケルトンテンプレート一覧を返す
+ *
+ * @return テンプレート情報の QVariantList
+ */
 QVariantList JsonUtils::skeletonTemplates()
 {
     return skeletonData();
 }
 
+/**
+ * @brief 指定IDのスケルトンテンプレート内容を返す
+ *
+ * @param id テンプレートID
+ * @return テンプレート内容文字列。該当がない場合は空文字列
+ */
 QString JsonUtils::generateSkeleton(const QString &id)
 {
     const auto &list = skeletonData();
@@ -93,6 +153,12 @@ QString JsonUtils::generateSkeleton(const QString &id)
     return QString();
 }
 
+/**
+ * @brief キーに最も適合するスケルトンテンプレートIDを提案する
+ *
+ * @param key キー文字列
+ * @return 提案するテンプレートID。該当がない場合は空文字列
+ */
 QString JsonUtils::suggestSkeletonForKey(const QString &key)
 {
     if (key.trimmed().isEmpty())

@@ -21,6 +21,14 @@
 #include <optional>
 
 namespace {
+/**
+ * @brief rocksdb::SliceをUTF-8文字列に変換する
+ *
+ * バイナリデータや無効なUTF-8シーケンスが含まれる場合は std::nullopt を返す。
+ *
+ * @param slice 変換対象のSlice
+ * @return 変換後のQString、または無効な場合は std::nullopt
+ */
 std::optional<QString> utf8StringFromSlice(const rocksdb::Slice &slice)
 {
     QByteArray bytes(slice.data(), static_cast<qsizetype>(slice.size()));
@@ -32,17 +40,36 @@ std::optional<QString> utf8StringFromSlice(const rocksdb::Slice &slice)
     return text;
 }
 
+/**
+ * @brief QStringをUTF-8バイト列のstd::stringに変換する
+ *
+ * @param text 変換対象文字列
+ * @return UTF-8エンコードされたstd::string
+ */
 std::string utf8BytesFromString(const QString &text)
 {
     QByteArray bytes = text.toUtf8();
     return std::string(bytes.constData(), static_cast<size_t>(bytes.size()));
 }
 
+/**
+ * @brief rocksdb::StatusをQStringに変換する
+ *
+ * @param status RocksDBステータス
+ * @return ステータスメッセージ文字列
+ */
 QString statusToQString(const rocksdb::Status &status)
 {
     return QString::fromStdString(status.ToString());
 }
 
+/**
+ * @brief 個別書き込み用のWriteOptionsを生成する
+ *
+ * sync=true、disableWAL=false で個別エントリの書き込みを永続化する。
+ *
+ * @return 書き込みオプション
+ */
 rocksdb::WriteOptions makeDurableWriteOptions()
 {
     rocksdb::WriteOptions options;
@@ -51,6 +78,13 @@ rocksdb::WriteOptions makeDurableWriteOptions()
     return options;
 }
 
+/**
+ * @brief バッチ書き込み用のWriteOptionsを生成する
+ *
+ * sync=false、disableWAL=false で大量書き込みを効率的に行う。
+ *
+ * @return 書き込みオプション
+ */
 rocksdb::WriteOptions makeBatchWriteOptions()
 {
     rocksdb::WriteOptions options;
@@ -59,6 +93,11 @@ rocksdb::WriteOptions makeBatchWriteOptions()
     return options;
 }
 
+/**
+ * @brief データベースOpen用のDBOptionsを生成する
+ *
+ * @return デフォルトのOpenオプション
+ */
 rocksdb::DBOptions makeOpenDbOptions()
 {
     rocksdb::DBOptions options;
@@ -68,6 +107,15 @@ rocksdb::DBOptions makeOpenDbOptions()
     return options;
 }
 
+/**
+ * @brief 指定カラムファミリーのデータを永続化する
+ *
+ * SyncWALがサポートされていない環境では、Flushを使用して代替する。
+ *
+ * @param db RocksDBインスタンス
+ * @param handle カラムファミリーハンドル
+ * @return 永続化結果のステータス
+ */
 rocksdb::Status persistColumnFamily(rocksdb::DB *db, rocksdb::ColumnFamilyHandle *handle)
 {
     rocksdb::Status syncStatus = db->SyncWAL();
@@ -89,37 +137,72 @@ struct RocksDBBackend::Impl {
     QStringList recentDatabases;
 };
 
+/**
+ * @brief RocksDBBackendを構築する
+ *
+ * @param parent 親QObject
+ */
 RocksDBBackend::RocksDBBackend(QObject *parent)
     : QObject(parent)
     , d(std::make_unique<Impl>())
 {
 }
 
+/**
+ * @brief RocksDBBackendを破棄する
+ *
+ * デストラクタでデータベース接続を閉じる。
+ */
 RocksDBBackend::~RocksDBBackend()
 {
     closeDatabase();
 }
 
+/**
+ * @brief データベースに接続しているかどうかを返す
+ *
+ * @return 接続中の場合は true
+ */
 bool RocksDBBackend::connected() const
 {
     return d->db != nullptr;
 }
 
+/**
+ * @brief 現在開いているデータベースのパスを返す
+ *
+ * @return データベースパス
+ */
 QString RocksDBBackend::databasePath() const
 {
     return d->dbPath;
 }
 
+/**
+ * @brief データベースに含まれるカラムファミリー名のリストを返す
+ *
+ * @return カラムファミリー名のリスト
+ */
 QStringList RocksDBBackend::columnFamilies() const
 {
     return d->cfNames;
 }
 
+/**
+ * @brief 現在選択中のカラムファミリー名を返す
+ *
+ * @return カラムファミリー名
+ */
 QString RocksDBBackend::currentColumnFamily() const
 {
     return d->currentCf;
 }
 
+/**
+ * @brief 現在選択中のカラムファミリーを設定する
+ *
+ * @param cf カラムファミリー名
+ */
 void RocksDBBackend::setCurrentColumnFamily(const QString &cf)
 {
     if (d->currentCf != cf) {
@@ -129,12 +212,28 @@ void RocksDBBackend::setCurrentColumnFamily(const QString &cf)
     }
 }
 
+/**
+ * @brief 最近開いたデータベースのパスリストを返す
+ *
+ * @return 最近のデータベースパスリスト（最大10件）
+ */
 QStringList RocksDBBackend::recentDatabases() const
 {
     auto settings = SettingsMigration::newSettings();
     return settings.value(SettingsKeys::recentDatabases).toStringList();
 }
 
+/**
+ * @brief 指定パスのRocksDBデータベースを開く
+ *
+ * データベースを開く際、永続化されているOPTIONSファイルを読み込むことで
+ * 元の table_factory 設定（特に BlockBasedTableOptions::format_version）を保持する。
+ * これにより、新しいバージョンのRocksDBで編集しても古いツールで読めない
+ * SSTファイルが生成されるのを防ぐ。
+ *
+ * @param path データベースディレクトリパス
+ * @return 開くことに成功した場合は true
+ */
 bool RocksDBBackend::openDatabase(const QString &path)
 {
     closeDatabase();
@@ -224,6 +323,12 @@ bool RocksDBBackend::openDatabase(const QString &path)
     return true;
 }
 
+/**
+ * @brief 開いているデータベースを閉じる
+ *
+ * WALの同期、必要に応じたFlush、カラムファミリーハンドルの破棄、
+ * データベースのCloseを行う。
+ */
 void RocksDBBackend::closeDatabase()
 {
     if (!d->db) return;
@@ -267,6 +372,12 @@ void RocksDBBackend::closeDatabase()
     emit currentColumnFamilyChanged();
 }
 
+/**
+ * @brief 指定名のカラムファミリーハンドルを返す
+ *
+ * @param name カラムファミリー名
+ * @return ハンドルポインタ。見つからない場合は nullptr
+ */
 rocksdb::ColumnFamilyHandle* RocksDBBackend::getColumnFamilyHandle(const QString &name)
 {
     if (!d->db) return nullptr;
@@ -278,6 +389,17 @@ rocksdb::ColumnFamilyHandle* RocksDBBackend::getColumnFamilyHandle(const QString
     return nullptr;
 }
 
+/**
+ * @brief 現在のカラムファミリーから検索・ページングしてデータを取得する
+ *
+ * キーと値の両方を大文字小文字を無視して検索する。
+ * 非UTF-8のエントリはスキップする。
+ *
+ * @param search 検索文字列（空の場合は全件）
+ * @param offset オフセット
+ * @param limit 取得上限
+ * @return キーと値のペアを含むQJsonObject
+ */
 QJsonObject RocksDBBackend::getData(const QString &search, int offset, int limit)
 {
     QJsonObject result;
@@ -323,6 +445,13 @@ QJsonObject RocksDBBackend::getData(const QString &search, int offset, int limit
     return result;
 }
 
+/**
+ * @brief 指定プレフィックスで始まるキーのデータを取得する
+ *
+ * @param prefix 検索プレフィックス
+ * @param limit 取得上限
+ * @return キーと値のペアを含むQJsonObject
+ */
 QJsonObject RocksDBBackend::getDataByPrefix(const QString &prefix, int limit)
 {
     QJsonObject result;
@@ -361,6 +490,12 @@ QJsonObject RocksDBBackend::getDataByPrefix(const QString &prefix, int limit)
     return result;
 }
 
+/**
+ * @brief 指定キーの値を取得する
+ *
+ * @param key キー
+ * @return キーと値のペアを含むQJsonObject。見つからない場合は空
+ */
 QJsonObject RocksDBBackend::getDataByKey(const QString &key)
 {
     QJsonObject result;
@@ -384,6 +519,13 @@ QJsonObject RocksDBBackend::getDataByKey(const QString &key)
     return result;
 }
 
+/**
+ * @brief 現在のカラムファミリーにキー・値を書き込む
+ *
+ * @param key キー
+ * @param value 値
+ * @return 書き込みに成功した場合は true
+ */
 bool RocksDBBackend::setData(const QString &key, const QString &value)
 {
     if (!d->db || key.isEmpty()) return false;
@@ -401,6 +543,12 @@ bool RocksDBBackend::setData(const QString &key, const QString &value)
     return true;
 }
 
+/**
+ * @brief 現在のカラムファミリーから指定キーを削除する
+ *
+ * @param key 削除対象キー
+ * @return 削除に成功した場合は true
+ */
 bool RocksDBBackend::deleteData(const QString &key)
 {
     if (!d->db) return false;
@@ -418,6 +566,13 @@ bool RocksDBBackend::deleteData(const QString &key)
     return true;
 }
 
+/**
+ * @brief 現在のカラムファミリーの全データを削除する
+ *
+ * WriteBatch を使用してアトミックに全エントリを削除する。
+ *
+ * @return 削除に成功した場合は true
+ */
 bool RocksDBBackend::clearData()
 {
     if (!d->db) return false;
@@ -455,6 +610,13 @@ bool RocksDBBackend::clearData()
     return true;
 }
 
+/**
+ * @brief 現在のカラムファミリーの全データをJSONとしてエクスポートする
+ *
+ * JSONとして解析可能な値はオブジェクト/配列に変換し、それ以外は文字列として返す。
+ *
+ * @return キーと値のペアを含むQJsonObject
+ */
 QJsonObject RocksDBBackend::exportData()
 {
     QJsonObject result;
@@ -492,6 +654,12 @@ QJsonObject RocksDBBackend::exportData()
     return result;
 }
 
+/**
+ * @brief JSONデータを現在のカラムファミリーに一括インポートする
+ *
+ * @param data キーと値のペアを含むQJsonObject
+ * @return インポートに成功した場合は true
+ */
 bool RocksDBBackend::importData(const QJsonObject &data)
 {
     if (!d->db) return false;
@@ -533,6 +701,12 @@ bool RocksDBBackend::importData(const QJsonObject &data)
     return true;
 }
 
+/**
+ * @brief 現在のカラムファミリーの合計エントリ数を返す
+ *
+ * @param search 検索文字列（空の場合は全件）
+ * @return エントリ数
+ */
 int RocksDBBackend::getTotalEntryCount(const QString &search)
 {
     if (!d->db) return 0;
@@ -562,6 +736,14 @@ int RocksDBBackend::getTotalEntryCount(const QString &search)
     return count;
 }
 
+/**
+ * @brief データベースの統計情報を取得する
+ *
+ * 各カラムファミリーのエントリ数、合計エントリ数、カラムファミリー数、
+ * ディスク使用量を返す。
+ *
+ * @return 統計情報を含むQJsonObject
+ */
 QJsonObject RocksDBBackend::getDatabaseStats()
 {
     QJsonObject stats;
@@ -601,6 +783,11 @@ QJsonObject RocksDBBackend::getDatabaseStats()
     return stats;
 }
 
+/**
+ * @brief クリップボードに文字列をコピーする
+ *
+ * @param text コピーする文字列
+ */
 void RocksDBBackend::copyToClipboard(const QString &text)
 {
     QClipboard *clipboard = QGuiApplication::clipboard();
@@ -608,6 +795,13 @@ void RocksDBBackend::copyToClipboard(const QString &text)
     emit toastRequested(tr("Copied to clipboard"), "success");
 }
 
+/**
+ * @brief 最近開いたデータベースリストにパスを追加する
+ *
+ * 既存の重複を削除し、先頭に追加して最大10件に制限する。
+ *
+ * @param path 追加するデータベースパス
+ */
 void RocksDBBackend::addToRecent(const QString &path)
 {
     auto settings = SettingsMigration::newSettings();
@@ -619,6 +813,9 @@ void RocksDBBackend::addToRecent(const QString &path)
     emit recentDatabasesChanged();
 }
 
+/**
+ * @brief 最近開いたデータベースリストをクリアする
+ */
 void RocksDBBackend::clearRecent()
 {
     auto settings = SettingsMigration::newSettings();
@@ -626,6 +823,11 @@ void RocksDBBackend::clearRecent()
     emit recentDatabasesChanged();
 }
 
+/**
+ * @brief 最近開いたデータベースリストから指定パスを削除する
+ *
+ * @param path 削除するデータベースパス
+ */
 void RocksDBBackend::removeFromRecent(const QString &path)
 {
     auto settings = SettingsMigration::newSettings();
@@ -635,6 +837,13 @@ void RocksDBBackend::removeFromRecent(const QString &path)
     emit recentDatabasesChanged();
 }
 
+/**
+ * @brief QJsonObjectを指定ファイルにJSON形式で書き出す
+ *
+ * @param filePath 出力ファイルパス
+ * @param data 書き出すデータ
+ * @return 書き出しに成功した場合は true
+ */
 bool RocksDBBackend::writeJsonToFile(const QString &filePath, const QJsonObject &data)
 {
     QJsonDocument doc(data);
@@ -649,6 +858,12 @@ bool RocksDBBackend::writeJsonToFile(const QString &filePath, const QJsonObject 
     return true;
 }
 
+/**
+ * @brief 指定ファイルからJSONオブジェクトを読み込む
+ *
+ * @param filePath 入力ファイルパス
+ * @return 読み込んだQJsonObject。失敗時は空
+ */
 QJsonObject RocksDBBackend::readJsonFromFile(const QString &filePath)
 {
     QFile file(filePath);
@@ -666,12 +881,22 @@ QJsonObject RocksDBBackend::readJsonFromFile(const QString &filePath)
     return doc.object();
 }
 
+/**
+ * @brief ダークモード設定を保存する
+ *
+ * @param isDark ダークモードを有効にする場合は true
+ */
 void RocksDBBackend::saveDarkMode(bool isDark)
 {
     auto settings = SettingsMigration::newSettings();
     settings.setValue(SettingsKeys::darkMode, isDark);
 }
 
+/**
+ * @brief ダークモード設定を読み込む
+ *
+ * @return ダークモードが有効な場合は true
+ */
 bool RocksDBBackend::loadDarkMode() const
 {
     auto settings = SettingsMigration::newSettings();
