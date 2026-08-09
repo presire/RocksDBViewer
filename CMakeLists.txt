@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(RocksDBViewer VERSION 1.2.3 LANGUAGES CXX)
+project(RocksDBViewer VERSION 1.2.4 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -98,6 +98,23 @@ qt6_add_resources(${EXECUTABLE_NAME} "icons"
 qt_add_translations(${EXECUTABLE_NAME}
     TS_FILES ${TS_FILES}
 )
+
+# ----------------------------------------------------------------------------
+# Test infrastructure
+# ----------------------------------------------------------------------------
+option(BUILD_TESTING "Build unit tests (requires Qt6::Test)" ON)
+if(BUILD_TESTING)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
+
+# Sample database generator (used by manual testing and the durability script)
+add_executable(create_sample_db EXCLUDE_FROM_ALL tools/create_sample_db.cpp)
+target_include_directories(create_sample_db PRIVATE ${ROCKSDB_INCLUDE_DIR})
+target_link_libraries(create_sample_db PRIVATE ${ROCKSDB_LIBRARY})
+if(WIN32)
+    target_link_libraries(create_sample_db PRIVATE shlwapi rpcrt4)
+endif()
 
 target_include_directories(${EXECUTABLE_NAME} PRIVATE
     src

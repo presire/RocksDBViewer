@@ -20,6 +20,10 @@ class RocksDBBackend : public QObject
     Q_PROPERTY(QStringList columnFamilies READ columnFamilies NOTIFY columnFamiliesChanged)
     Q_PROPERTY(QString currentColumnFamily READ currentColumnFamily WRITE setCurrentColumnFamily NOTIFY currentColumnFamilyChanged)
     Q_PROPERTY(QStringList recentDatabases READ recentDatabases NOTIFY recentDatabasesChanged)
+    // True when the current DB was opened without a persisted OPTIONS file
+    // (LoadLatestOptions failed). In that state, edits may produce SST files
+    // that older RocksDB tooling cannot read (Issue #2 fallback warning).
+    Q_PROPERTY(bool openedWithDefaults READ openedWithDefaults NOTIFY openedWithDefaultsChanged)
 
 public:
     explicit RocksDBBackend(QObject *parent = nullptr);
@@ -31,6 +35,7 @@ public:
     QString currentColumnFamily() const;
     void setCurrentColumnFamily(const QString &cf);
     QStringList recentDatabases() const;
+    bool openedWithDefaults() const;
 
     Q_INVOKABLE bool openDatabase(const QString &path);
     Q_INVOKABLE void closeDatabase();
@@ -66,6 +71,7 @@ signals:
     void dataChanged();
     void toastRequested(const QString &message, const QString &type);
     void recentDatabasesChanged();
+    void openedWithDefaultsChanged();
 
 private:
     rocksdb::ColumnFamilyHandle* getColumnFamilyHandle(const QString &name);

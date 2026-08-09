@@ -135,6 +135,7 @@ struct RocksDBBackend::Impl {
     QString currentCf;
     std::vector<rocksdb::ColumnFamilyHandle*> handles;
     QStringList recentDatabases;
+    bool openedWithDefaults = false;
 };
 
 /**
@@ -221,6 +222,19 @@ QStringList RocksDBBackend::recentDatabases() const
 {
     auto settings = SettingsMigration::newSettings();
     return settings.value(SettingsKeys::recentDatabases).toStringList();
+}
+
+/**
+ * @brief 現在開いているDBがデフォルトオプションで開かれたかどうかを返す
+ *
+ * LoadLatestOptions が失敗したフォールバック状態かどうか。
+ * この状態では編集結果が古いRocksDBツールで読めないSSTファイルになる可能性がある。
+ *
+ * @return デフォルトオプションで開かれた場合は true
+ */
+bool RocksDBBackend::openedWithDefaults() const
+{
+    return d->openedWithDefaults;
 }
 
 /**
@@ -313,6 +327,24 @@ bool RocksDBBackend::openDatabase(const QString &path)
         d->currentCf = d->cfNames.first();
     }
 
+    // Issue #2 fallback surfacing: when LoadLatestOptions failed, the DB is
+    // opened with build-default table_factory options. Edits in this state can
+    // produce SST files with a format_version that older RocksDB tooling
+    // (e.g. ldb built against an earlier major) cannot read. Expose this state
+    // as a Q_PROPERTY for persistent UI feedback and emit an immediate toast.
+    if (d->openedWithDefaults != !useLoaded) {
+        d->openedWithDefaults = !useLoaded;
+        emit openedWithDefaultsChanged();
+    }
+    if (d->openedWithDefaults) {
+        qWarning() << "Database opened with default options (LoadLatestOptions failed)."
+                   << "Edits may produce SST files unreadable by older RocksDB tooling.";
+        emit toastRequested(
+            tr("Database opened with default options. "
+               "Edits may not be readable by older RocksDB tools."),
+            "warning");
+    }
+
     addToRecent(path);
 
     emit connectedChanged();
@@ -332,6 +364,12 @@ bool RocksDBBackend::openDatabase(const QString &path)
 void RocksDBBackend::closeDatabase()
 {
     if (!d->db) return;
+
+    // Reset Issue #2 fallback flag so a subsequent open starts from a clean state.
+    if (d->openedWithDefaults) {
+        d->openedWithDefaults = false;
+        emit openedWithDefaultsChanged();
+    }
 
     rocksdb::Status syncStatus = d->db->SyncWAL();
     if (!syncStatus.ok() && syncStatus.IsNotSupported()) {

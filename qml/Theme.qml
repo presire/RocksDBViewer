@@ -15,4 +15,8 @@ QtObject {
     readonly property color error: "#f44336"
     readonly property color success: "#4caf50"
     readonly property color warning: "#ff9800"
+    // Issue #2 fallback banner colors (light/dark aware)
+    readonly property color warningBackground: isDark ? "#3E2723" : "#FFF8E1"
+    readonly property color warningBorder: isDark ? "#FF6F00" : "#FF8F00"
+    readonly property color warningText: isDark ? "#FFD54F" : "#E65100"
 }

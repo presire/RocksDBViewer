@@ -248,42 +248,42 @@
         <translation>Select</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="135"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="148"/>
         <source>Search: </source>
         <translation>Search: </translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="193"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="206"/>
         <source>Go to parent folder</source>
         <translation>Go to parent folder</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="234"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="253"/>
         <source>File name</source>
         <translation>File name</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="243"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="268"/>
         <source>Show hidden files and folders</source>
         <translation>Show hidden files and folders</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="459"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="480"/>
         <source>Cancel</source>
         <translation>Cancel</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="429"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="450"/>
         <source>OK</source>
         <translation>OK</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="490"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="511"/>
         <source>Confirm Overwrite</source>
         <translation>Confirm Overwrite</translation>
     </message>
     <message>
-        <location filename="../qml/components/FilePickerDialog.qml" line="498"/>
+        <location filename="../qml/components/FilePickerDialog.qml" line="519"/>
         <source>The file already exists. Overwrite?</source>
         <translation>The file already exists. Overwrite?</translation>
     </message>
@@ -314,12 +314,12 @@
 <context>
     <name>QObject</name>
     <message>
-        <location filename="../src/utils/JsonUtils.cpp" line="40"/>
+        <location filename="../src/utils/JsonUtils.cpp" line="76"/>
         <source>Valid JSON format</source>
         <translation>Valid JSON format</translation>
     </message>
     <message>
-        <location filename="../src/utils/JsonUtils.cpp" line="45"/>
+        <location filename="../src/utils/JsonUtils.cpp" line="81"/>
         <source>Not in JSON format (will be saved as string)</source>
         <translation>Not in JSON format (will be saved as string)</translation>
     </message>
@@ -327,65 +327,70 @@
 <context>
     <name>RocksDBBackend</name>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="217"/>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="255"/>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="384"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="343"/>
+        <source>Database opened with default options. Edits may not be readable by older RocksDB tools.</source>
+        <translation>Database opened with default options. Edits may not be readable by older RocksDB tools.</translation>
+    </message>
+    <message>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="478"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="523"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="690"/>
         <source>Skipped entries containing non-UTF-8 keys or values</source>
         <translation>Skipped entries containing non-UTF-8 keys or values</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="220"/>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="258"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="481"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="526"/>
         <source>Loaded %1 entries (limit reached)</source>
         <translation>Loaded %1 entries (limit reached)</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="277"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="551"/>
         <source>Skipped entry containing non-UTF-8 value</source>
         <translation>Skipped entry containing non-UTF-8 value</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="299"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="580"/>
         <source>Data saved</source>
         <translation>Data saved</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="316"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="603"/>
         <source>Data deleted</source>
         <translation>Data deleted</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="348"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="647"/>
         <source>All data deleted</source>
         <translation>All data deleted</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="421"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="738"/>
         <source>%1 records imported</source>
         <translation>%1 records imported</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="496"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="833"/>
         <source>Copied to clipboard</source>
         <translation>Copied to clipboard</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="531"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="890"/>
         <source>Failed to open file for writing</source>
         <translation>Failed to open file for writing</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="536"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="895"/>
         <source>Data exported</source>
         <translation>Data exported</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="544"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="909"/>
         <source>Failed to open file for reading</source>
         <translation>Failed to open file for reading</translation>
     </message>
     <message>
-        <location filename="../src/backend/RocksDBBackend.cpp" line="551"/>
+        <location filename="../src/backend/RocksDBBackend.cpp" line="916"/>
         <source>Invalid JSON file</source>
         <translation>Invalid JSON file</translation>
     </message>
@@ -439,48 +444,58 @@
         <translation>RocksDB Viewer</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="155"/>
-        <location filename="../qml/main.qml" line="286"/>
+        <location filename="../qml/main.qml" line="203"/>
+        <location filename="../qml/main.qml" line="334"/>
         <source>Data refreshed</source>
         <translation>Data refreshed</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="159"/>
+        <location filename="../qml/main.qml" line="207"/>
         <source>Auto-refresh started</source>
         <translation>Auto-refresh started</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="159"/>
+        <location filename="../qml/main.qml" line="207"/>
         <source>Auto-refresh stopped</source>
         <translation>Auto-refresh stopped</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="124"/>
+        <location filename="../qml/main.qml" line="138"/>
         <source>Stats refreshed</source>
         <translation>Stats refreshed</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="204"/>
+        <location filename="../qml/main.qml" line="176"/>
+        <source>Database opened with default options. Edits may not be readable by older RocksDB tools.</source>
+        <translation>Database opened with default options. Edits may not be readable by older RocksDB tools.</translation>
+    </message>
+    <message>
+        <location filename="../qml/main.qml" line="183"/>
+        <source>Dismiss</source>
+        <translation>Dismiss</translation>
+    </message>
+    <message>
+        <location filename="../qml/main.qml" line="252"/>
         <source>Select RocksDB Directory</source>
         <translation>Select RocksDB Directory</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="213"/>
+        <location filename="../qml/main.qml" line="261"/>
         <source>Import JSON</source>
         <translation>Import JSON</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="228"/>
+        <location filename="../qml/main.qml" line="276"/>
         <source>Export JSON</source>
         <translation>Export JSON</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="241"/>
+        <location filename="../qml/main.qml" line="289"/>
         <source>Confirm Clear All</source>
         <translation>Confirm Clear All</translation>
     </message>
     <message>
-        <location filename="../qml/main.qml" line="249"/>
+        <location filename="../qml/main.qml" line="297"/>
         <source>Are you sure you want to delete all data in column family &apos;%1&apos;?</source>
         <translation>Are you sure you want to delete all data in column family &apos;%1&apos;?</translation>
     </message>

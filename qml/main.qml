@@ -45,6 +45,8 @@ ApplicationWindow {
     property int pageSize: 1000
     property int totalEntries: 0
     property var databaseStats: ({})
+    // Issue #2 fallback banner dismissal (resets when DB changes)
+    property bool formatWarningDismissed: false
 
     // Data reload logic
     function reloadData() {
@@ -98,6 +100,14 @@ ApplicationWindow {
         function onErrorOccurred(message) {
             toastManager.show(message, "error");
         }
+        // Reset dismissal when the open database changes (Issue #2 banner).
+        function onDatabasePathChanged() {
+            root.formatWarningDismissed = false;
+        }
+        function onOpenedWithDefaultsChanged() {
+            // Re-arm dismissal whenever the warning state transitions.
+            root.formatWarningDismissed = false;
+        }
     }
 
     ColumnLayout {
@@ -142,6 +152,40 @@ ApplicationWindow {
             Layout.fillHeight: true
             visible: Backend.connected
             spacing: 12
+
+            // Issue #2 fallback warning banner: visible when the current DB
+            // was opened without a persisted OPTIONS file. Edits in this state
+            // may produce SST files unreadable by older RocksDB tooling.
+            Rectangle {
+                id: formatWarningBanner
+                Layout.fillWidth: true
+                visible: Backend.openedWithDefaults && !root.formatWarningDismissed
+                color: theme.warningBackground
+                border.color: theme.warningBorder
+                border.width: 1
+                radius: 4
+                implicitHeight: warningRow.implicitHeight + 16
+
+                RowLayout {
+                    id: warningRow
+                    anchors.fill: parent
+                    anchors.margins: 8
+                    spacing: 8
+
+                    Text {
+                        text: "\u26A0 " + qsTr("Database opened with default options. Edits may not be readable by older RocksDB tools.")
+                        color: theme.warningText
+                        Layout.fillWidth: true
+                        wrapMode: Text.Wrap
+                    }
+
+                    Button {
+                        text: qsTr("Dismiss")
+                        flat: true
+                        onClicked: root.formatWarningDismissed = true
+                    }
+                }
+            }
 
             ControlBar {
                 id: controlBar
