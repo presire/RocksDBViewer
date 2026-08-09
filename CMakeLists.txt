@@ -104,8 +104,18 @@ qt_add_translations(${EXECUTABLE_NAME}
 # ----------------------------------------------------------------------------
 option(BUILD_TESTING "Build unit tests (requires Qt6::Test)" ON)
 if(BUILD_TESTING)
-    enable_testing()
-    add_subdirectory(tests)
+    # Probe for Qt6Test before entering tests/. Some CI images ship Qt6
+    # without the Test component; in that case silently disable tests instead
+    # of failing the entire configure step. Install qt6-test (or equivalent)
+    # to re-enable tests on the host.
+    find_package(Qt6 COMPONENTS Test QUIET)
+    if(NOT Qt6Test_FOUND)
+        message(STATUS "Qt6Test not found; disabling BUILD_TESTING")
+        set(BUILD_TESTING OFF CACHE BOOL "Build unit tests" FORCE)
+    else()
+        enable_testing()
+        add_subdirectory(tests)
+    endif()
 endif()
 
 # Sample database generator (used by manual testing and the durability script)
