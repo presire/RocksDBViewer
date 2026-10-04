@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 # RocksDBViewerのビルド設定
 # Qt6/QMLアプリ本体、単体テスト、サンプルDB生成ツール、インストールとRPMパッケージを定義する
-project(RocksDBViewer VERSION 1.2.4 LANGUAGES CXX)
+project(RocksDBViewer VERSION 1.2.5 LANGUAGES CXX)
 
 # コンパイラ設定
 set(CMAKE_CXX_STANDARD 20)
