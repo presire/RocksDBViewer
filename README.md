@@ -35,6 +35,27 @@ offering the same feature set with native performance and no browser/WebView dep
 > Set `ROCKSDB_ROOT` to a RocksDB installation or source-build directory that contains  
 > `include/rocksdb/db.h` and either `lib/librocksdb.*` or `lib64/librocksdb.*`.  
 
+## Supported Database Versions
+
+Which databases can be opened depends on the version of the RocksDB library that RocksDB Viewer is built with.  
+The deciding factor is the SST file format version (`BlockBasedTableOptions::format_version`) used when the database was written.  
+
+| RocksDB library used for the build | Databases that can be opened |
+|---|---|
+| 11.10 or later | Written by RocksDB 4.6 or later (SST `format_version` 2–8) |
+| 11.0 – 11.9 (tested: 11.1.1) | Written by RocksDB 4.6 or later (SST `format_version` 2–7) |
+| 10.4 – 10.11 | Written by older RocksDB, or by newer RocksDB with default settings (SST `format_version` up to 7) |
+| 9.x – 10.3 | Written by older RocksDB, or by RocksDB 10.10 or earlier with default settings (SST `format_version` up to 6) |
+
+- RocksDB 10.11.0 changed the default `format_version` to 7. A build using RocksDB 9.x – 10.3 cannot open databases written by RocksDB 10.11 or later with default settings (`Corrupt or unsupported format_version: 7`).
+- `format_version` 8 (RocksDB 11.10 or later) is used only when explicitly enabled.
+- RocksDB 11.0 removed support for `format_version` 0 and 1 (the default before RocksDB 4.6). To open such a database, first run a full compaction with RocksDB 4.6 or later and earlier than 11.0.
+- The compression algorithms used by the database must be compiled into the RocksDB library (RocksDB 11.5 or later uses LZ4 by default).
+- Databases that require a custom comparator, merge operator, or other plugin not built into RocksDB cannot be opened, regardless of version.
+- Read-only mode writes nothing to the database. In edit mode, new SST files are written with the `format_version` and compression recorded in the database's OPTIONS file, so the on-disk format is not upgraded to the library default.
+
+See [`include/rocksdb/table.h`](https://github.com/facebook/rocksdb/blob/main/include/rocksdb/table.h) and [`HISTORY.md`](https://github.com/facebook/rocksdb/blob/main/HISTORY.md) in the RocksDB repository for details.  
+
 ## Build
 
 ### 1. Prepare RocksDB
@@ -178,56 +199,67 @@ export LD_LIBRARY_PATH=/path/to/rocksdb/lib:$LD_LIBRARY_PATH
 
 ```
 RocksDBViewer/
-├── CMakeLists.txt
-├── docs/
+├── .github/                         # GitHub configuration
+│   └── workflows/                   # GitHub Actions workflows
+│       └── release.yml              # Release CI on v* tags (openSUSE RPMs, Windows zip)
+├── assets/                          # Icons and images
+│   ├── Qt.png                       # Qt logo used in README
+│   ├── RocksDBViewer@128.png        # Application icon (128x128)
+│   ├── RocksDBViewer@256.png        # Application icon (256x256)
+│   └── RocksDBViewer@512.png        # Application icon (512x512)
+├── docs/                            # Documentation
 │   └── durability-testing.md        # Write durability / corruption test procedure
-├── README.md
-├── README_JP.md
-├── LICENSE
-├── RocksDBViewer.desktop.in         # Linux desktop entry template
-├── assets/
-│   ├── RocksDBViewer@128.png
-│   ├── RocksDBViewer@256.png
-│   ├── RocksDBViewer@512.png
-│   └── Qt.png
-├── i18n/
-│   ├── rocksdbviewer_ja.ts          # Japanese translations
-│   └── rocksdbviewer_en.ts          # English source strings
+├── i18n/                            # Translation sources
+│   ├── rocksdbviewer_en.ts          # English source strings
+│   └── rocksdbviewer_ja.ts          # Japanese translations
 ├── licenses/                        # Third-party license texts
-├── qml/
-│   ├── main.qml                     # Main application window
-│   ├── Theme.qml                    # Theme constants
-│   └── components/
-│       ├── HeaderBar.qml
-│       ├── DatabasePanel.qml
-│       ├── ControlBar.qml
-│       ├── DataTable.qml
-│       ├── EditModal.qml
-│       ├── ToastManager.qml
-│       ├── WelcomePage.qml
-│       ├── StatsPanel.qml
-│       ├── SkeletonMenu.qml
-│       └── FilePickerDialog.qml
+│   ├── Qt.md                        # Qt license information (LGPL v3)
+│   ├── RocksDB-LICENSE.Apache       # RocksDB license (Apache License 2.0)
+│   └── RocksDB-LICENSE.leveldb      # RocksDB license (BSD 3-Clause, from LevelDB)
+├── qml/                             # QML user interface
+│   ├── main.qml                     # Main window: layout, dialogs, and backend wiring
+│   ├── Theme.qml                    # Light / dark theme colors
+│   └── components/                  # UI components used by main.qml
+│       ├── ControlBar.qml           # Search, sort, pagination, and data operation buttons
+│       ├── DatabasePanel.qml        # Database path, Open Database button, recent databases
+│       ├── DataTable.qml            # Entry list with edit / delete actions
+│       ├── EditModal.qml            # Add / edit / view entry dialog with JSON tools
+│       ├── FilePickerDialog.qml     # Custom folder / file picker for open and save
+│       ├── HeaderBar.qml            # Title bar with language and theme switches
+│       ├── SkeletonMenu.qml         # JSON skeleton template menu for EditModal
+│       ├── StatsPanel.qml           # Database statistics (entries, column families, disk usage)
+│       ├── ToastManager.qml         # Toast notifications
+│       └── WelcomePage.qml          # Welcome screen shown when no database is open
 ├── sample-db/                       # Sample RocksDB data for local testing
-├── screenshot/
-│   ├── main.png
-│   ├── select_db.png
-│   ├── read_db.png
-│   └── edit_db.png
-├── src/
+├── screenshot/                      # Screenshots used in README
+│   ├── edit_db.png                  # Edit entry
+│   ├── main.png                     # Main window
+│   ├── read_db.png                  # Database view
+│   └── select_db.png                # Select database
+├── src/                             # C++ sources
 │   ├── main.cpp                     # Application entry point and QML bootstrapping
-│   ├── backend/
-│   │   ├── RocksDBBackend.h/.cpp    # RocksDB access, CRUD, import/export
+│   ├── backend/                     # Database access and data models
 │   │   ├── EntryModel.h/.cpp        # QAbstractListModel for entry data
-│   │   └── FilterProxyModel.h/.cpp  # Search, sort, and pagination proxy
-│   └── utils/
+│   │   ├── FilterProxyModel.h/.cpp  # Search, sort, and pagination proxy
+│   │   └── RocksDBBackend.h/.cpp    # RocksDB access, CRUD, import/export (QML singleton Backend)
+│   └── utils/                       # Utility classes
+│       ├── FileSystemModel.h/.cpp   # File system model for the custom picker dialog
+│       ├── I18nManager.h/.cpp       # Runtime language switching (QML singleton I18n)
 │       ├── JsonUtils.h/.cpp         # JSON formatting, minify, validate, skeleton helpers
-│       ├── I18nManager.h/.cpp       # Runtime language switching
-│       ├── FileSystemModel.h/.cpp   # File system model for custom picker dialogs
-│       ├── SettingsMigration.h/.cpp # Settings storage migration helpers
-│       └── SettingsKeys.h           # Persistent settings key constants
-└── tools/
-    └── create_sample_db.cpp         # Sample database generator
+│       ├── SettingsKeys.h           # Persistent settings key constants
+│       └── SettingsMigration.h/.cpp # Settings storage migration helpers
+├── tests/                           # Automated tests
+│   ├── CMakeLists.txt               # QTest target registered with CTest (BUILD_TESTING)
+│   ├── run_durability_test.sh       # End-to-end durability regression script
+│   └── test_rocksdbbackend.cpp      # RocksDBBackend unit tests (QTest)
+├── tools/                           # Development tools
+│   └── create_sample_db.cpp         # Sample database generator (create_sample_db target)
+├── CMakeLists.txt                   # Top-level build: app, tests, tools, install, CPack
+├── LICENSE                          # MIT License
+├── README.md                        # README (English)
+├── README_JP.md                     # README (Japanese)
+├── RocksDBViewer.desktop.in         # Linux desktop entry template
+└── test-release-locally.sh          # Runs the release RPM build locally with Podman
 ```
 
 ## Updating Translations

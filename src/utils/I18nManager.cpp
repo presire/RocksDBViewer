@@ -1,7 +1,5 @@
 #include "I18nManager.h"
 #include <QCoreApplication>
-#include <QDir>
-#include <QFile>
 #include <QDebug>
 
 /**
@@ -19,7 +17,7 @@ I18nManager::I18nManager(QQmlEngine *engine, QObject *parent)
 /**
  * @brief 現在設定されている言語コードを返す
  *
- * @return 言語コード (例: "ja", "en")
+ * @return 言語コード (例:[ja]、[en])
  */
 QString I18nManager::currentLanguage() const
 {
@@ -29,7 +27,7 @@ QString I18nManager::currentLanguage() const
 /**
  * @brief 現在の言語を設定する
  *
- * まず、実行ファイルと同じディレクトリのファイルシステムパスから翻訳ファイルを読み込み、失敗した場合はリソース内のパスをフォールバックとして使用する
+ * ホワイトリスト([ja]、[en])に含まれる言語のみ受け付け、埋め込みリソース内の翻訳ファイルのみを読み込む
  * 読み込みに成功した場合は翻訳をインストールし、QMLエンジンを再翻訳する
  *
  * @param lang 言語コード
@@ -38,19 +36,17 @@ void I18nManager::setCurrentLanguage(const QString &lang)
 {
     if (m_currentLanguage == lang) return;
 
+    if (lang != QStringLiteral("ja") && lang != QStringLiteral("en")) {
+        qWarning() << "Unsupported language ignored:" << lang;
+        return;
+    }
+
     QCoreApplication::removeTranslator(&m_translator);
 
-    // Try filesystem path first (build directory)
-    QString fsPath = QDir(QCoreApplication::applicationDirPath()).filePath(
-        QString("rocksdbviewer_%1.qm").arg(lang));
-
-    bool ok = m_translator.load(fsPath);
-
-    if (!ok) {
-        // Fallback: try resource path
-        QString resPath = QString(":/i18n/rocksdbviewer_%1.qm").arg(lang);
-        ok = m_translator.load(resPath);
-    }
+    // 埋め込みリソースからのみ翻訳ファイルを読み込む
+    // 実行ファイルの隣に置かれた不正な.qmファイルを読み込ませない
+    const QString resPath = QStringLiteral(":/i18n/rocksdbviewer_%1.qm").arg(lang);
+    const bool ok = m_translator.load(resPath);
 
     if (ok) {
         QCoreApplication::installTranslator(&m_translator);

@@ -24,7 +24,8 @@ FileSystemModel::FileSystemModel(QObject *parent)
 /**
  * @brief モデルが保持する行数を返す
  *
- * @param parent 親インデックス (通常は使用しない)
+ * @param parent 親インデックス
+ * @note 通常は使用しない
  * @return エントリ数
  */
 int FileSystemModel::rowCount(const QModelIndex &parent) const
@@ -95,7 +96,7 @@ QString FileSystemModel::currentPath() const
 /**
  * @brief 現在のパスを設定する
  *
- * パスが変更された場合は currentPathChanged シグナルを発行し、エントリリストを再読み込みする
+ * パスが変更された場合はcurrentPathChangedシグナルを発行し、エントリリストを再読み込みする
  *
  * @param path 新しいパス
  */
@@ -103,8 +104,8 @@ void FileSystemModel::setCurrentPath(const QString &path)
 {
     if (m_currentPath != path) {
         m_currentPath = path;
-        emit currentPathChanged();
         reload();
+        emit currentPathChanged();
     }
 }
 
@@ -127,8 +128,8 @@ void FileSystemModel::setNameFilters(const QStringList &filters)
 {
     if (m_nameFilters != filters) {
         m_nameFilters = filters;
-        emit nameFiltersChanged();
         reload();
+        emit nameFiltersChanged();
     }
 }
 
@@ -165,7 +166,7 @@ void FileSystemModel::refresh()
  * @brief 指定パスのファイル・ディレクトリが存在するか判定する
  *
  * @param path パス
- * @return 存在する場合は true
+ * @return 存在する場合はtrue
  */
 bool FileSystemModel::fileExists(const QString &path) const
 {
@@ -176,7 +177,7 @@ bool FileSystemModel::fileExists(const QString &path) const
  * @brief 指定インデックスのファイル情報をマップ形式で返す
  *
  * @param index インデックス
- * @return ファイル情報を含む QVariantMap
+ * @return ファイル情報を含むQVariantMap
  */
 QVariantMap FileSystemModel::get(int index) const
 {
@@ -196,7 +197,8 @@ QVariantMap FileSystemModel::get(int index) const
  * @brief プレフィックスに一致する最初のエントリのインデックスを返す
  *
  * @param prefix 検索プレフィックス
- * @return 一致するインデックス。見つからない場合は -1
+ * @return 一致するインデックス
+ * @note 見つからない場合は-1を返す
  */
 int FileSystemModel::findIndexByPrefix(const QString &prefix) const
 {
@@ -214,7 +216,7 @@ int FileSystemModel::findIndexByPrefix(const QString &prefix) const
 /**
  * @brief ファイルを表示するかどうかを返す
  *
- * @return ファイルを表示する場合は true
+ * @return ファイルを表示する場合はtrue
  */
 bool FileSystemModel::showFiles() const
 {
@@ -224,21 +226,21 @@ bool FileSystemModel::showFiles() const
 /**
  * @brief ファイル表示の有無を設定する
  *
- * @param show ファイルを表示する場合は true
+ * @param show ファイルを表示する場合はtrue
  */
 void FileSystemModel::setShowFiles(bool show)
 {
     if (m_showFiles != show) {
         m_showFiles = show;
-        emit showFilesChanged();
         reload();
+        emit showFilesChanged();
     }
 }
 
 /**
  * @brief 非表示ファイルを表示するかどうかを返す
  *
- * @return 非表示ファイルを表示する場合は true
+ * @return 非表示ファイルを表示する場合はtrue
  */
 bool FileSystemModel::showHidden() const
 {
@@ -250,7 +252,7 @@ bool FileSystemModel::showHidden() const
  *
  * 設定は永続化される
  *
- * @param show 非表示ファイルを表示する場合は true
+ * @param show 非表示ファイルを表示する場合はtrue
  */
 void FileSystemModel::setShowHidden(bool show)
 {
@@ -258,8 +260,8 @@ void FileSystemModel::setShowHidden(bool show)
         m_showHidden = show;
         auto settings = SettingsMigration::newSettings();
         settings.setValue(SettingsKeys::showHiddenFiles, m_showHidden);
-        emit showHiddenChanged();
         reload();
+        emit showHiddenChanged();
     }
 }
 
@@ -267,7 +269,7 @@ void FileSystemModel::setShowHidden(bool show)
  * @brief バイト数を人間可読な文字列に変換する
  *
  * @param bytes バイト数
- * @return 人間可読なサイズ文字列 (例: "1.5 MB")
+ * @return 人間可読なサイズ文字列 (例: [1.5MB])
  */
 QString FileSystemModel::formatFileSize(qint64 bytes)
 {

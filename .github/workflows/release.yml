@@ -5,7 +5,7 @@ on:
     tags: ['v*']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   validate:
@@ -13,7 +13,7 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.VERSION }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Extract and validate version
         id: version
@@ -31,9 +31,10 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     container:
-      image: opensuse/tumbleweed:latest
+      # tag: latest, digest looked up on 2026-10-05
+      image: opensuse/tumbleweed@sha256:db7d09c264b72eb95655deb7a696a64d65a0159d1dfb0a4d703347669c709e44
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install dependencies
         run: |
@@ -48,6 +49,7 @@ jobs:
       - name: Build RocksDB
         run: |
           git clone --depth 1 --branch v11.1.1 https://github.com/facebook/rocksdb.git /tmp/rocksdb
+          test "$(git -C /tmp/rocksdb rev-parse HEAD)" = "6cdeb9d9d0630763327f512e6255cab33f6834e7" || { echo "RocksDB commit mismatch"; exit 1; }
           cmake -S /tmp/rocksdb -B /tmp/rocksdb/build \
             -DCMAKE_BUILD_TYPE=Release \
             -DWITH_TESTS=OFF \
@@ -78,7 +80,7 @@ jobs:
             mv "$f" "RocksDBViewer-${{ needs.validate.outputs.version }}-tumbleweed.x86_64.rpm"
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: RocksDBViewer-${{ needs.validate.outputs.version }}-tumbleweed.x86_64.rpm
           path: build/*.rpm
@@ -87,9 +89,10 @@ jobs:
     needs: validate
     runs-on: ubuntu-latest
     container:
-      image: opensuse/leap:16.0
+      # tag: 16.0, digest looked up on 2026-10-05
+      image: opensuse/leap@sha256:7f3aeccb6a613c0fc1690d3d3e5eb493fd477ee4587de20640017fc36d72f9b0
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install dependencies
         run: |
@@ -104,6 +107,7 @@ jobs:
       - name: Build RocksDB
         run: |
           git clone --depth 1 --branch v11.1.1 https://github.com/facebook/rocksdb.git /tmp/rocksdb
+          test "$(git -C /tmp/rocksdb rev-parse HEAD)" = "6cdeb9d9d0630763327f512e6255cab33f6834e7" || { echo "RocksDB commit mismatch"; exit 1; }
           cmake -S /tmp/rocksdb -B /tmp/rocksdb/build \
             -DCMAKE_BUILD_TYPE=Release \
             -DWITH_TESTS=OFF \
@@ -134,7 +138,7 @@ jobs:
             mv "$f" "RocksDBViewer-${{ needs.validate.outputs.version }}-leap16.x86_64.rpm"
           done
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: RocksDBViewer-${{ needs.validate.outputs.version }}-leap16.x86_64.rpm
           path: build/*.rpm
@@ -143,27 +147,34 @@ jobs:
     needs: validate
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Install Ninja
         run: choco install ninja
 
       - name: Setup MSVC
-        uses: ilammy/msvc-dev-cmd@v1
+        uses: ilammy/msvc-dev-cmd@0b201ec74fa43914dc39ae48a89fd1d8cb592756 # v1.13.0
 
       - name: Install Qt
-        uses: jurplel/install-qt-action@v4
+        uses: jurplel/install-qt-action@a9c63c7c123f3069cff414e7e482d95dfa9d8125 # v4.4.1
         with:
-          version: '6.9.1'
+          # 6.9.x does not receive open-source security fixes (CVE-2025-12385, CVE-2026-6210, ...).
+          version: '6.11.3'
           host: 'windows'
           target: 'desktop'
           arch: 'win64_msvc2022_64'
           cache: true
+          # aqtinstall 3.3.0 (latest PyPI release) cannot resolve the per-compiler Windows
+          # repository layout introduced in Qt 6.11 (fixed by miurahr/aqtinstall#1000, unreleased).
+          # Pinned to an audited master commit; switch back to aqtversion once a release ships.
+          aqtsource: 'git+https://github.com/miurahr/aqtinstall.git@076e1659807d0b362a3ed684d54c2e9c775eb9c7'
 
       - name: Build RocksDB
         shell: powershell
         run: |
           git clone --depth 1 --branch v11.1.1 https://github.com/facebook/rocksdb.git C:\rocksdb-src
+          $head = (git -C C:\rocksdb-src rev-parse HEAD).Trim()
+          if ($head -ne "6cdeb9d9d0630763327f512e6255cab33f6834e7") { Write-Error "RocksDB commit mismatch"; exit 1 }
           cmake -S C:\rocksdb-src -B C:\rocksdb-src\build `
             -G "Ninja Multi-Config" `
             -DCMAKE_BUILD_TYPE=Release `
@@ -199,7 +210,7 @@ jobs:
         run: |
           Compress-Archive -Path deploy\* -DestinationPath RocksDBViewer-${{ needs.validate.outputs.version }}-windows-x64.zip
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: RocksDBViewer-${{ needs.validate.outputs.version }}-windows-x64.zip
           path: RocksDBViewer-${{ needs.validate.outputs.version }}-windows-x64.zip
@@ -207,11 +218,13 @@ jobs:
   release:
     needs: [validate, build-rpm-tumbleweed, build-rpm-leap16, build-windows]
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       - name: Download all artifacts
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
         with:
           path: artifacts
           merge-multiple: true

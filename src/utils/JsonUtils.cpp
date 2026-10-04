@@ -17,7 +17,7 @@ JsonUtils::JsonUtils(QObject *parent)
 }
 
 /**
- * @brief JSON文字列を整形（インデント）して返す
+ * @brief JSON文字列をインデント付きで整形して返す
  *
  * 無効なJSONの場合は入力をそのまま返す
  *
@@ -32,7 +32,7 @@ QString JsonUtils::formatJson(const QString &json)
 }
 
 /**
- * @brief JSON文字列を最小化（1行）して返す
+ * @brief JSON文字列を1行へ最小化して返す
  *
  * 無効なJSONの場合は入力をそのまま返す
  *
@@ -50,7 +50,7 @@ QString JsonUtils::minifyJson(const QString &json)
  * @brief 文字列が有効なJSONか判定する
  *
  * @param json 判定対象文字列
- * @return 有効なJSONの場合は true
+ * @return 有効なJSONの場合はtrue
  */
 bool JsonUtils::isValidJson(const QString &json)
 {
@@ -62,8 +62,9 @@ bool JsonUtils::isValidJson(const QString &json)
 /**
  * @brief JSON文字列の検証結果メッセージを返す
  *
- * 有効なJSONの場合は "Valid JSON format"、空文字列の場合は空文字列、
- * それ以外は "Not in JSON format (will be saved as string)" を返す
+ * 有効なJSONの場合は[Valid JSON format]を返す
+ * 空文字列の場合は空文字列を返す
+ * それ以外の場合は[Not in JSON format (will be saved as string)]を返す
  *
  * @param json JSON文字列
  * @return 検証結果メッセージ
@@ -84,10 +85,10 @@ QString JsonUtils::validationMessage(const QString &json)
 /**
  * @brief 文字列がJSONらしい形式か判定する
  *
- * 先頭と末尾が "{" と "}" または "[" と "]" で囲まれているかを確認する
+ * 先頭と末尾が[{]と[}]または[[]と[]]で囲まれているかを確認する
  *
  * @param value 判定対象文字列
- * @return JSONらしい形式の場合は true
+ * @return JSONらしい形式の場合はtrue
  */
 bool JsonUtils::isJsonLike(const QString &value)
 {
@@ -97,9 +98,10 @@ bool JsonUtils::isJsonLike(const QString &value)
 }
 
 /**
- * @brief スケルトンテンプレートリストを返す
+ * @brief JSONスケルトンテンプレートの静的データを返す
  *
- * @return テンプレート情報のリスト
+ * 初回呼び出し時にテンプレート識別子、表示名、内容、キー一致パターンを生成する
+ * @return テンプレート情報を保持する静的なQVariantList
  */
 static const QVariantList &skeletonData()
 {
@@ -129,7 +131,7 @@ static const QVariantList &skeletonData()
 /**
  * @brief JSONスケルトンテンプレート一覧を返す
  *
- * @return テンプレート情報の QVariantList
+ * @return テンプレート情報のQVariantList
  */
 QVariantList JsonUtils::skeletonTemplates()
 {
@@ -140,7 +142,8 @@ QVariantList JsonUtils::skeletonTemplates()
  * @brief 指定IDのスケルトンテンプレート内容を返す
  *
  * @param id テンプレートID
- * @return テンプレート内容文字列。該当がない場合は空文字列
+ * @return テンプレート内容文字列
+ * @note 該当がない場合は空文字列を返す
  */
 QString JsonUtils::generateSkeleton(const QString &id)
 {
@@ -157,7 +160,8 @@ QString JsonUtils::generateSkeleton(const QString &id)
  * @brief キーに最も適合するスケルトンテンプレートIDを提案する
  *
  * @param key キー文字列
- * @return 提案するテンプレートID。該当がない場合は空文字列
+ * @return 提案するテンプレートID
+ * @note 該当がない場合は空文字列を返す
  */
 QString JsonUtils::suggestSkeletonForKey(const QString &key)
 {

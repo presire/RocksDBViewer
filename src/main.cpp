@@ -2,10 +2,10 @@
 #include <QQmlApplicationEngine>
 #include <QQmlContext>
 #include <QtQml>
+#include <QQuickStyle>
 #include <QIcon>
 #include <QSettings>
 #include <QWindow>
-#include <QFile>
 #include <QLocale>
 #include <memory>
 #include "backend/RocksDBBackend.h"
@@ -16,6 +16,7 @@
 #include "utils/FileSystemModel.h"
 #include "utils/SettingsMigration.h"
 #include "utils/SettingsKeys.h"
+#include "utils/WindowGeometry.h"
 
 /**
  * @brief アプリケーションのエントリーポイント
@@ -29,16 +30,18 @@
  */
 int main(int argc, char *argv[])
 {
-    // Qt GUIアプリケーションの初期化
+    // QtGUIアプリケーションを初期化する
     QGuiApplication app(argc, argv);
 
-    SettingsMigration::migrateIfNeeded();
-
-    // アプリケーション識別情報の設定 (QStandardPaths / QSettings等が参照)
+    // QStandardPathsとQSettingsが参照するアプリケーション識別情報を設定する
+    // SettingsMigration::migrateIfNeeded()は、ConfigLocationに組織名とアプリケーション名を含むパスを使用する
+    // そのため、この設定より後に呼び出す
     app.setOrganizationName("Presire");
     app.setOrganizationDomain("https://github.com/presire");
     app.setApplicationName("RocksDBViewer");
     app.setApplicationVersion(ROCKSDBVIEWER_VERSION);
+
+    SettingsMigration::migrateIfNeeded();
 
     QIcon appIcon;
     appIcon.addFile(":/RocksDBViewerApp/assets/RocksDBViewer@128.png", QSize(128, 128));
@@ -46,15 +49,17 @@ int main(int argc, char *argv[])
     appIcon.addFile(":/RocksDBViewerApp/assets/RocksDBViewer@512.png", QSize(512, 512));
     app.setWindowIcon(appIcon);
 
-    // Materialスタイルの設定
-    qputenv("QT_QUICK_CONTROLS_STYLE", "Material");
+    // Materialスタイルを設定する
+    // KDEPlasmaではプラットフォームテーマによりBreezeスタイルが選択され、ツールチップのbinding loop警告やレイアウト崩れの原因になる
+    // そのため環境変数ではなくAPIで明示的に指定し、QQmlApplicationEngineの生成前に呼び出す
+    QQuickStyle::setStyle("Material");
 
     std::unique_ptr<RocksDBBackend> backend = std::make_unique<RocksDBBackend>();
     std::unique_ptr<I18nManager> i18n;
     QQmlApplicationEngine engine;
     i18n = std::make_unique<I18nManager>(&engine);
 
-    // 型の登録
+    // QMLで生成する型を登録する
     qmlRegisterType<EntryModel>("RocksDBViewerApp", 1, 0, "EntryModel");
     qmlRegisterType<FilterProxyModel>("RocksDBViewerApp", 1, 0, "FilterProxyModel");
     qmlRegisterType<FileSystemModel>("RocksDBViewerApp", 1, 0, "FileSystemModel");
@@ -63,24 +68,31 @@ int main(int argc, char *argv[])
             return new JsonUtils();
         });
 
-    // シングルトンの登録 (QMLから常にアクセス可能にする)
+    // QMLから常にアクセス可能なシングルトンを登録する
     qmlRegisterSingletonInstance("RocksDBViewerApp", 1, 0, "Backend", backend.get());
     qmlRegisterSingletonInstance("RocksDBViewerApp", 1, 0, "I18n", i18n.get());
 
-    // 言語設定の永続化と自動検出
+    // 言語設定を永続化し、未設定時はシステムロケールから検出する
     auto settings = SettingsMigration::newSettings();
     QString savedLang = settings.value(SettingsKeys::language, QString()).toString();
-    if (savedLang.isEmpty()) {
-        QLocale locale = QLocale::system();
-        QString lang = locale.name().left(2);
-        if (lang == "ja") {
-            savedLang = "ja";
+    if (savedLang != QStringLiteral("ja") && savedLang != QStringLiteral("en")) {
+        if (savedLang.isEmpty()) {
+            QLocale locale = QLocale::system();
+            QString lang = locale.name().left(2);
+            if (lang == "ja") {
+                savedLang = "ja";
+            }
+            else {
+                savedLang = "en";
+            }
         }
         else {
-            savedLang = "en";
+            // 設定ファイル内の不正な言語コードを無視し、ロケール由来の既定値を使用する
+            QLocale locale = QLocale::system();
+            savedLang = (locale.name().left(2) == "ja") ? "ja" : "en";
         }
     }
-    // 言語変更時に保存
+    // 言語変更時に設定を保存する
     QObject::connect(i18n.get(), &I18nManager::currentLanguageChanged, [i18n = i18n.get()]() {
         auto s = SettingsMigration::newSettings();
         s.setValue(SettingsKeys::language, i18n->currentLanguage());
@@ -91,11 +103,11 @@ int main(int argc, char *argv[])
         settings.setValue(SettingsKeys::language, savedLang);
     }
 
-    // ダークモード設定の読み込みとQMLへの公開
+    // ダークモード設定を読み込み、QMLへ公開する
     bool initialDarkMode = settings.value(SettingsKeys::darkMode, false).toBool();
     engine.rootContext()->setContextProperty("initialDarkMode", initialDarkMode);
 
-    // メインQMLの読み込み
+    // メインQMLを読み込む
     const QUrl url(QStringLiteral("qrc:/RocksDBViewerApp/qml/main.qml"));
     QObject::connect(&engine, &QQmlApplicationEngine::objectCreated,
                      &app, [url](QObject *obj, const QUrl &objUrl) {
@@ -105,28 +117,32 @@ int main(int argc, char *argv[])
 
     engine.load(url);
 
-    // コマンドライン引数からDBパスを取得
+    // コマンドライン引数からデータベースパスを取得する
+    // パスの検証はopenDatabase側で行い、エラーはerrorOccurred経由でトースト表示する
     QStringList args = app.arguments();
     if (args.size() > 1) {
         QString dbPath = args.at(1);
-        if (QFile::exists(dbPath)) {
-            backend->openDatabase(dbPath);
-        }
+        backend->openDatabase(dbPath);
     }
 
-    // ウィンドウ状態の復元とアイコン設定 (Linuxタスクバー互換性のため)
+    // Linuxタスクバーとの互換性のため、ウィンドウ状態を復元してアイコンを設定する
     const auto windows = app.topLevelWindows();
     if (!windows.isEmpty()) {
         QWindow *window = windows.first();
         window->setIcon(QIcon(":/RocksDBViewerApp/assets/RocksDBViewer@512.png"));
         if (settings.contains(SettingsKeys::windowX)) {
-            window->setX(settings.value(SettingsKeys::windowX).toInt());
-            window->setY(settings.value(SettingsKeys::windowY).toInt());
-            window->setWidth(settings.value(SettingsKeys::windowWidth, 1400).toInt());
-            window->setHeight(settings.value(SettingsKeys::windowHeight, 900).toInt());
+            // 前回と異なるモニタ構成やスケーリング設定でも画面内に収まるよう、起動のたびに補正する
+            const QRect saved(settings.value(SettingsKeys::windowX).toInt(),
+                              settings.value(SettingsKeys::windowY).toInt(),
+                              settings.value(SettingsKeys::windowWidth, 1400).toInt(),
+                              settings.value(SettingsKeys::windowHeight, 900).toInt());
+            window->setGeometry(WindowGeometry::fitToScreens(saved,
+                                                              WindowGeometry::availableGeometries(),
+                                                              QSize(100, 100),
+                                                              QSize(1400, 900)));
         }
 
-        // 終了時にウィンドウ状態を保存
+        // 終了時にウィンドウ状態を保存する
         QObject::connect(&app, &QCoreApplication::aboutToQuit, [window]() {
             auto s = SettingsMigration::newSettings();
             s.setValue(SettingsKeys::windowX, window->x());

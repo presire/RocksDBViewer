@@ -4,6 +4,22 @@ import QtQuick.Controls.Material
 import QtQuick.Layouts
 import RocksDBViewerApp
 
+/**
+ * @brief フォルダ・ファイルの選択と、保存先の指定を行うカスタムダイアログ
+ *
+ * folderModeがtrueの場合はフォルダ選択、falseの場合はファイル選択となる
+ * saveModeがtrueの場合はファイル名の入力欄を表示し、既存ファイルの上書き前に確認ダイアログを表示する
+ * 一覧はFileSystemModelで表示し、キーボード操作とマウス操作の両方に対応する
+ * 一覧上で文字を入力すると、先頭一致で項目を検索する (searchBuffer)
+ * 選択結果は、pathSelectedシグナルで親へ通知する
+ * 配色はthemeプロパティ、Materialの明暗はmaterialThemeプロパティ経由で受け取る
+ *
+ * キーボード操作
+ * - [Return] 選択中の項目を開く(フォルダへ移動、またはファイルを確定)
+ * - [Esc] 入力欄・検索文字列を順にクリアし、何も無ければダイアログを閉じる
+ * - [Alt+Left] 親フォルダへ移動する
+ * - [Home][End][PageUp][PageDown] 一覧内を移動する
+ */
 Dialog {
     id: dialogRoot
     modal: true
@@ -14,20 +30,50 @@ Dialog {
     contentHeight: height - (header ? header.implicitHeight : 0)
     padding: 0
     closePolicy: Popup.CloseOnPressOutsideParent
-    Material.theme: Material.Light
+    Material.theme: dialogRoot.materialTheme
 
+    /** 配色定数を持つTheme.qmlのインスタンス */
     property var theme
+
+    /** 子コントロールへ適用するMaterial.themeの値 (Material.LightまたはMaterial.Dark) */
     property int materialTheme
+
+    /** フォルダ選択モードかどうか (trueの場合はフォルダのみ選択でき、ファイルは表示しない) */
     property bool folderMode: false
+
+    /** 保存モードかどうか (trueの場合はファイル名の入力欄を表示し、既存ファイルの上書きを確認する) */
     property bool saveMode: false
-    property var nameFilters: ["*.*"]
+
+    /** ファイル種別の絞り込み候補 (例: "JSON files (*.json)"、括弧内のパターンを絞り込みに使う) */
+    property var nameFilters: ["*"]
+
+    /** 保存時にファイル名へ補う拡張子 (ドットを含まない、拡張子が既にある場合は補わない) */
+    property string defaultSuffix: ""
+
+    /** ダイアログのタイトルとして表示する文字列 */
     property string titleText: qsTr("Select")
+
+    /** 一覧で選択中のパス (未選択の場合は空文字) */
     property string selectedPath: ""
+
+    /** 上書き確認中の保存先パス */
     property string pendingSavePath: ""
+
+    /** 一覧上で入力された、先頭一致検索の文字列 (空でない間は右上に表示する) */
     property string searchBuffer: ""
 
-    signal pathSelected(string path)
+    /**
+     * @brief パスが選択されたことを通知する
+     * @param path 選択されたフォルダまたはファイルのパス
+     * @param overwriteApproved 既存ファイルの上書きをユーザが確認済みの場合のみtrue
+     */
+    signal pathSelected(string path, bool overwriteApproved)
 
+    /**
+     * @brief 選択状態と検索文字列を初期化して、ダイアログを開く
+     *
+     * 保存モードの場合は、ファイル名の入力欄も空にする
+     */
     function openDialog() {
         selectedPath = "";
         searchBuffer = "";
@@ -37,6 +83,11 @@ Dialog {
         open();
     }
 
+    /**
+     * @brief searchBufferに先頭一致する項目へ、一覧の選択を移す
+     *
+     * 一致する項目が無い場合は、選択を変更しない
+     */
     function performSearch() {
         var idx = fsModel.findIndexByPrefix(searchBuffer);
         if (idx >= 0) {
@@ -45,10 +96,20 @@ Dialog {
         }
     }
 
+    /**
+     * @brief キー入力が、検索文字列として使える文字かどうかを判定する
+     * @param text キー入力で得られた文字列
+     * @return 空でなく、制御文字を含まない場合はtrue
+     */
     function isSearchInput(text) {
         return text.length > 0 && !/[\x00-\x1F\x7F]/.test(text);
     }
 
+    /**
+     * @brief 一覧の現在位置の項目を、selectedPathへ反映する
+     *
+     * フォルダ選択モードの場合は、フォルダのみを反映する
+     */
     function syncSelectionToCurrentIndex() {
         var item = fsModel.get(fileList.currentIndex);
         if (item && item.filePath && (!dialogRoot.folderMode || item.isDirectory)) {
@@ -56,6 +117,46 @@ Dialog {
         }
     }
 
+    /**
+     * @brief 拡張子が無いファイル名へ、defaultSuffixを補う
+     * @param name ファイル名
+     * @return 拡張子を補ったファイル名 (補う必要が無い場合は、そのままのファイル名)
+     */
+    function applySuffix(name) {
+        if (defaultSuffix.length > 0 && name.lastIndexOf(".") < 0) {
+            return name + "." + defaultSuffix;
+        }
+        return name;
+    }
+
+    /**
+     * @brief 現在のフォルダへ指定したファイル名で保存することを要求する
+     *
+     * 同名のファイルが既に存在する場合は、上書きの確認ダイアログを表示する
+     * 存在しない場合は、pathSelectedを通知してダイアログを閉じる
+     * @param fileName 保存するファイル名 (空文字の場合は何もしない)
+     */
+    function requestSave(fileName) {
+        if (fileName.length === 0) {
+            return;
+        }
+        var fullPath = fsModel.currentPath + "/" + applySuffix(fileName);
+        if (fsModel.fileExists(fullPath)) {
+            dialogRoot.pendingSavePath = fullPath;
+            overwriteDialog.open();
+        } else {
+            dialogRoot.pathSelected(fullPath, false);
+            dialogRoot.close();
+        }
+    }
+
+    /**
+     * @brief 一覧の現在位置の項目を開く、または確定する
+     *
+     * フォルダの場合は、そのフォルダへ移動する
+     * ファイルの場合は、保存モードならファイル名を入力欄へ反映して保存を要求し、それ以外ならパスを確定する
+     * フォルダ選択モードでは、ファイルは無視する
+     */
     function activateCurrentItem() {
         var item = fsModel.get(fileList.currentIndex);
         if (!item) return;
@@ -65,15 +166,23 @@ Dialog {
             dialogRoot.searchBuffer = "";
         } else {
             if (dialogRoot.folderMode) return;
-            dialogRoot.selectedPath = item.filePath;
             if (dialogRoot.saveMode) {
                 fileNameField.text = item.fileName;
+                requestSave(item.fileName);
+                return;
             }
-            dialogRoot.pathSelected(item.filePath);
+            dialogRoot.selectedPath = item.filePath;
+            dialogRoot.pathSelected(item.filePath, false);
             dialogRoot.close();
         }
     }
 
+    /**
+     * @brief [Esc]キーの処理を行う
+     *
+     * パス入力欄、ファイル名入力欄、検索文字列の順に、内容があればクリアする
+     * いずれも空の場合は、ダイアログを閉じる
+     */
     function handleEscape() {
         if (pathField.activeFocus && pathField.text.length > 0) {
             pathField.text = "";
@@ -93,12 +202,14 @@ Dialog {
         dialogRoot.close();
     }
 
+    // [Return] 一覧にフォーカスがある場合に、選択中の項目を開く
     Shortcut {
         sequence: "Return"
         enabled: fileList.activeFocus
         onActivated: activateCurrentItem()
     }
 
+    // [Esc] 入力欄にフォーカスが無く、確認ダイアログやフィルタ候補が開いていない場合に処理する
     Shortcut {
         sequence: "Esc"
         enabled: dialogRoot.visible
@@ -109,19 +220,22 @@ Dialog {
         onActivated: handleEscape()
     }
 
+    // 開いた時点で一覧へフォーカスを移し、先頭の項目を選択する
     onOpened: {
         fileList.forceActiveFocus();
         searchBuffer = "";
+        selectedPath = "";
         if (fileList.count > 0) {
             fileList.currentIndex = 0;
-            syncSelectionToCurrentIndex();
         }
     }
 
+    // 検索文字列がある間だけ、右上の検索表示を出す
     onSearchBufferChanged: {
         searchPopup.visible = searchBuffer.length > 0;
     }
 
+    // [Alt+Left] 親フォルダへ移動する
     Shortcut {
         sequence: "Alt+Left"
         onActivated: {
@@ -131,6 +245,7 @@ Dialog {
         }
     }
 
+    // 先頭一致検索の入力中の文字列を、右上に表示するポップアップ
     Rectangle {
         id: searchPopup
         width: 220
@@ -146,15 +261,27 @@ Dialog {
         Label {
             anchors.centerIn: parent
             text: qsTr("Search: ") + dialogRoot.searchBuffer
+            textFormat: Text.PlainText
             color: theme.primaryText
         }
     }
 
+    /**
+     * @brief ファイル種別の絞り込み文字列から、括弧内のパターンを取り出す
+     * @param filterString 絞り込み文字列 (例: "JSON files (*.json)")
+     * @return 括弧内のパターン (括弧が無い場合は"*")
+     */
     function extractFilterPattern(filterString) {
         var match = filterString.match(/\(([^)]+)\)/);
-        return match ? match[1] : "*.*";
+        return match ? match[1] : "*";
     }
 
+    /**
+     * @brief バイト数を、B・KB・MB・GBのいずれかの単位で整形する
+     * @param bytes バイト数
+     * @return 単位付きの文字列 (KB以上は小数第1位まで)
+     * @note 現在はどこからも呼び出されていない
+     */
     function formatFileSize(bytes) {
         if (bytes < 1024) return bytes + " B";
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + " KB";
@@ -178,6 +305,7 @@ Dialog {
         leftPadding: 24
     }
 
+    // フォルダの内容を一覧するモデル (フォルダ選択モードではファイルを表示せず、絞り込みも使わない)
     FileSystemModel {
         id: fsModel
         showFiles: !dialogRoot.folderMode
@@ -193,6 +321,7 @@ Dialog {
             Layout.fillWidth: true
             spacing: 8
 
+            // 親フォルダへ移動するボタン
             Button {
                 text: "▲"
                 flat: true
@@ -207,6 +336,7 @@ Dialog {
                 ToolTip.visible: hovered
             }
 
+            // 現在のパスの表示欄 (直接入力して[Return]で移動もできる)
             TextField {
                 id: pathField
                 Layout.fillWidth: true
@@ -215,10 +345,11 @@ Dialog {
                 placeholderTextColor: theme.secondaryText
                 Material.theme: dialogRoot.materialTheme
                 font.family: "monospace"
-                font.pixelSize: 12
+                font.pixelSize: 14
                 onAccepted: {
                     fsModel.setPath(text);
                     dialogRoot.searchBuffer = "";
+                    dialogRoot.selectedPath = "";
                 }
                 Keys.onPressed: function(event) {
                     if (event.key === Qt.Key_Escape) {
@@ -234,6 +365,7 @@ Dialog {
             spacing: 8
             visible: !dialogRoot.folderMode
 
+            // ファイル種別の絞り込み欄
             ComboBox {
                 id: filterCombo
                 visible: !dialogRoot.folderMode
@@ -246,6 +378,7 @@ Dialog {
                 }
             }
 
+            // 保存するファイル名の入力欄 (保存モードのみ表示)
             TextField {
                 id: fileNameField
                 visible: dialogRoot.saveMode
@@ -263,6 +396,7 @@ Dialog {
             }
         }
 
+        // 隠しファイル・隠しフォルダを表示するかどうかの切り替え
         CheckBox {
             id: showHiddenCheck
             text: qsTr("Show hidden files and folders")
@@ -285,6 +419,7 @@ Dialog {
             border.width: 1
             radius: 2
 
+            // フォルダ内の項目一覧 (キーボード操作とマウス操作に対応する)
             ListView {
                 id: fileList
                 anchors.fill: parent
@@ -295,6 +430,7 @@ Dialog {
                 focus: true
                 ScrollBar.vertical: ScrollBar {}
 
+                // クリックで選択、ダブルクリックでフォルダへ移動またはファイルを確定する
                 MouseArea {
                     anchors.fill: parent
                     onClicked: function(mouse) {
@@ -322,11 +458,15 @@ Dialog {
                             dialogRoot.searchBuffer = "";
                         } else {
                             if (dialogRoot.folderMode) return;
-                            dialogRoot.selectedPath = item.filePath;
                             if (dialogRoot.saveMode) {
                                 fileNameField.text = item.fileName;
+                                fileList.currentIndex = idx;
+                                dialogRoot.selectedPath = item.filePath;
+                                requestSave(item.fileName);
+                                return;
                             }
-                            dialogRoot.pathSelected(item.filePath);
+                            dialogRoot.selectedPath = item.filePath;
+                            dialogRoot.pathSelected(item.filePath, false);
                             dialogRoot.close();
                         }
                     }
@@ -345,6 +485,7 @@ Dialog {
                         activateCurrentItem();
                     }
                 }
+                // 移動キー・[Esc]・[Backspace]の処理と、文字入力による先頭一致検索
                 Keys.onPressed: function(event) {
                     switch (event.key) {
                     case Qt.Key_Home:
@@ -392,6 +533,7 @@ Dialog {
                     }
                 }
 
+                // 1項目分の表示 (選択中の項目は強調し、偶数行はわずかに色を変える)
                 delegate: Rectangle {
                     width: ListView.view.width
                     height: 36
@@ -420,6 +562,7 @@ Dialog {
                         Label {
                             Layout.fillWidth: true
                             text: model.fileName
+                            textFormat: Text.PlainText
                             color: theme.foreground
                             elide: Text.ElideMiddle
                         }
@@ -446,6 +589,7 @@ Dialog {
             Layout.fillWidth: true
             spacing: 12
 
+            // 選択を確定するボタン (モードごとに確定の条件が異なる)
             Button {
                 text: qsTr("OK")
                 Layout.fillWidth: true
@@ -454,23 +598,14 @@ Dialog {
                 onClicked: {
                     if (dialogRoot.folderMode) {
                         var path = dialogRoot.selectedPath.length > 0 ? dialogRoot.selectedPath : fsModel.currentPath;
-                        dialogRoot.pathSelected(path);
+                        dialogRoot.pathSelected(path, false);
                         dialogRoot.close();
                     } else if (dialogRoot.saveMode) {
-                        if (fileNameField.text.length === 0)
-                            return;
-                        var fullPath = fsModel.currentPath + "/" + fileNameField.text;
-                        if (fsModel.fileExists(fullPath)) {
-                            dialogRoot.pendingSavePath = fullPath;
-                            overwriteDialog.open();
-                        } else {
-                            dialogRoot.pathSelected(fullPath);
-                            dialogRoot.close();
-                        }
+                        requestSave(fileNameField.text);
                     } else {
                         if (dialogRoot.selectedPath.length === 0)
                             return;
-                        dialogRoot.pathSelected(dialogRoot.selectedPath);
+                        dialogRoot.pathSelected(dialogRoot.selectedPath, false);
                         dialogRoot.close();
                     }
                 }
@@ -485,15 +620,17 @@ Dialog {
         }
     }
 
+    // 表示フォルダが変わった場合は、パス表示・現在位置・選択状態を初期化する
     Connections {
         target: fsModel
         function onCurrentPathChanged() {
             pathField.text = fsModel.currentPath;
             fileList.currentIndex = 0;
-            syncSelectionToCurrentIndex();
+            dialogRoot.selectedPath = "";
         }
     }
 
+    // マウスの戻るボタンで、親フォルダへ移動する
     MouseArea {
         anchors.fill: parent
         acceptedButtons: Qt.BackButton
@@ -506,6 +643,7 @@ Dialog {
         }
     }
 
+    // 既存ファイルを上書きしてよいかの確認ダイアログ (承認時はoverwriteApprovedをtrueにして通知する)
     Dialog {
         id: overwriteDialog
         title: qsTr("Confirm Overwrite")
@@ -516,13 +654,14 @@ Dialog {
 
         Label {
             width: parent.width
-            text: qsTr("The file already exists. Overwrite?")
+            text: qsTr("The file '%1' already exists. Overwrite?").arg(dialogRoot.pendingSavePath)
+            textFormat: Text.PlainText
             wrapMode: Text.Wrap
             color: theme.foreground
         }
 
         onAccepted: {
-            dialogRoot.pathSelected(dialogRoot.pendingSavePath);
+            dialogRoot.pathSelected(dialogRoot.pendingSavePath, true);
             dialogRoot.close();
         }
     }

@@ -3,15 +3,28 @@ import QtQuick.Controls
 import QtQuick.Controls.Material
 import QtQuick.Layouts
 
+/**
+ * @brief 画面の隅に表示するトースト通知の管理コンポーネント
+ *
+ * show()で追加された通知を縦に並べ、フェードインしてから3秒後にフェードアウトして自動的に消す
+ * 通知の種別ごとに、背景色とアイコンが切り替わる
+ * 配置は、親側のanchorsで指定する (main.qmlでは画面右上)
+ */
 Item {
     id: root
     width: 320
     height: childrenRect.height
 
+    /**
+     * @brief トースト通知を追加する
+     * @param message 通知メッセージ
+     * @param type 通知の種別 ("success"・"error"・"warning"のいずれか、それ以外は"info"として扱う)
+     */
     function show(message, type) {
         toastModel.append({message: message, type: type});
     }
 
+    // 表示中の通知(message・type)を保持するモデル
     ListModel {
         id: toastModel
     }
@@ -21,6 +34,7 @@ Item {
         anchors.right: parent.right
         spacing: 8
 
+        // 通知は同時に数件しか存在しないため、Repeaterで生成する
         Repeater {
             model: toastModel
 
@@ -29,6 +43,7 @@ Item {
                 width: toastContent.width + 24
                 height: toastContent.height + 16
                 radius: 8
+                // 種別ごとの背景色
                 color: {
                     switch (type) {
                     case "success": return "#4caf50";
@@ -44,6 +59,7 @@ Item {
                     anchors.centerIn: parent
                     spacing: 8
 
+                    // 種別ごとのアイコン
                     Label {
                         text: {
                             switch (type) {
@@ -59,13 +75,14 @@ Item {
 
                     Label {
                         text: message
+                        textFormat: Text.PlainText
                         color: "white"
                         wrapMode: Text.Wrap
                         Layout.maximumWidth: 260
                     }
                 }
 
-                // Entry animation
+                // 表示時のフェードイン
                 PropertyAnimation {
                     target: parent
                     property: "opacity"
@@ -74,7 +91,7 @@ Item {
                     running: true
                 }
 
-                // Exit animation after delay
+                // 3秒表示した後にフェードアウトし、モデルから通知を削除する
                 SequentialAnimation {
                     running: true
                     PauseAnimation { duration: 3000 }

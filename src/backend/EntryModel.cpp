@@ -1,9 +1,8 @@
-#include "EntryModel.h"
 #include <QJsonDocument>
+#include "EntryModel.h"
 
 /**
  * @brief EntryModelを構築する
- *
  * @param parent 親QObject
  */
 EntryModel::EntryModel(QObject *parent)
@@ -13,9 +12,9 @@ EntryModel::EntryModel(QObject *parent)
 
 /**
  * @brief モデルが保持する行数を返す
- *
- * @param parent 親インデックス (通常は使用しない)
+ * @param parent 親インデックス
  * @return エントリ数
+ * @note 親インデックスは階層化していないため使用しない
  */
 int EntryModel::rowCount(const QModelIndex &parent) const
 {
@@ -24,14 +23,11 @@ int EntryModel::rowCount(const QModelIndex &parent) const
 }
 
 /**
- * @brief 指定インデックス・ロールのデータを返す
- *
- * DisplayValueRole の場合、JSONであれば整形し、200文字を超える場合は
- * 末尾に "..." を付けて省略表示する。
- *
+ * @brief 指定インデックスとロールのデータを返す
  * @param index モデルインデックス
  * @param role Qtロール
  * @return ロールに対応するデータ
+ * @note DisplayValueRoleではJSONを整形し、200文字を超える値を省略する
  */
 QVariant EntryModel::data(const QModelIndex &index, int role) const
 {
@@ -46,7 +42,7 @@ QVariant EntryModel::data(const QModelIndex &index, int role) const
         return entry.value;
     case DisplayValueRole: {
         QString display = entry.value;
-        // Try to pretty-print JSON
+        // JSONを整形する
         QJsonDocument doc = QJsonDocument::fromJson(display.toUtf8());
         if (!doc.isNull()) {
             display = QString::fromUtf8(doc.toJson(QJsonDocument::Indented));
@@ -62,9 +58,8 @@ QVariant EntryModel::data(const QModelIndex &index, int role) const
 }
 
 /**
- * @brief QML側で使用するロール名を返す
- *
- * @return ロール番号とロール名のマッピング
+ * @brief QMLで使用するロール名を返す
+ * @return ロール番号とロール名の対応表
  */
 QHash<int, QByteArray> EntryModel::roleNames() const
 {
@@ -76,8 +71,7 @@ QHash<int, QByteArray> EntryModel::roleNames() const
 }
 
 /**
- * @brief エントリリストを一括設定する
- *
+ * @brief エントリ一覧をJSONオブジェクトから一括設定する
  * @param entries キーと値のペアを含むJSONオブジェクト
  */
 void EntryModel::setEntries(const QJsonObject &entries)
@@ -91,7 +85,7 @@ void EntryModel::setEntries(const QJsonObject &entries)
 }
 
 /**
- * @brief モデルのデータをクリアする
+ * @brief モデルの全エントリを削除する
  */
 void EntryModel::clear()
 {
@@ -101,10 +95,10 @@ void EntryModel::clear()
 }
 
 /**
- * @brief 指定インデックスのキーを返す
- *
- * @param index インデックス
- * @return キー文字列。範囲外の場合は空文字列
+ * @brief 指定行のキーを返す
+ * @param index 行番号
+ * @return キー文字列
+ * @note 範囲外の行番号では空文字列を返す
  */
 QString EntryModel::keyAt(int index) const
 {
@@ -114,10 +108,10 @@ QString EntryModel::keyAt(int index) const
 }
 
 /**
- * @brief 指定インデックスの値を返す
- *
- * @param index インデックス
- * @return 値文字列。範囲外の場合は空文字列
+ * @brief 指定行の値を返す
+ * @param index 行番号
+ * @return 値文字列
+ * @note 範囲外の行番号では空文字列を返す
  */
 QString EntryModel::valueAt(int index) const
 {
